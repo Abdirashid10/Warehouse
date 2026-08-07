@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 
 class LoadingIndicator extends StatelessWidget {
   const LoadingIndicator({
@@ -15,12 +15,13 @@ class LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return SizedBox(
       width: size,
       height: size,
       child: CircularProgressIndicator(
         strokeWidth: strokeWidth,
-        color: color ?? AppColors.primary,
+        color: color ?? colors.primary,
       ),
     );
   }

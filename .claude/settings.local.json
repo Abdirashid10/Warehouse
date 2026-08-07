@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(ls -la \"/c/Users/Administrator/logistics wa backend eng\" 2>&1 | head -40)",
+      "Read(//c/Users/Administrator/**)",
+      "Bash(git checkout *)",
+      "Bash(cd \"/c/Users/Administrator/logistics\" && find server -type f -not -path \"*/node_modules/*\" | wc -l && echo \"=== ALL server files \\(non-js too\\) ===\" && find server -maxdepth 1 -type f -not -path \"*/node_modules/*\" && echo \"=== full js list count ===\" && find server -type f -name \"*.js\" -not -path \"*/node_modules/*\" | wc -l)",
+      "Read(//c/Users/Administrator/logistics/**)",
+      "Bash(cd \"/c/Users/Administrator/logistics\" && cat server/routes/authRoutes.js)",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" --max-time 5 http://localhost:8000/api/health)",
+      "Bash(curl -s -X POST http://localhost:8000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"x@y.z\",\"password\":\"wrong\"}' --max-time 5 -w \"\\\\nHTTP: %{http_code}\\\\n\")",
+      "Bash(awk -F'  ::  ' '{print $2}')",
+      "Bash(tr '\\\\\\\\' '/')",
+      "Bash(awk '{print $1, $2}')",
+      "Bash(perl -pi -e 's/colors\\\\.primary/AppColors.primary/g; s/colors\\\\.info/AppColors.info/g; s/colors\\\\.success/AppColors.success/g;' lib/features/dashboard/data/datasources/dashboard_remote_data_source.dart lib/features/dashboard/data/mappers/control_center_mapper.dart)",
+      "Bash(perl -0pi -e 's/    BuildContext context, \\\\{\\\\r?\\\\n      final colors = WmsUiColors\\\\.of\\\\\\(context\\\\\\);\\\\r?\\\\n/    BuildContext context, {\\\\n/g' lib/features/inventory/presentation/pages/inventory_tracking_screen.dart lib/features/profile/presentation/widgets/profile_enterprise_widgets.dart)",
+      "Bash(perl -0pi -e ' *)",
+      "Bash(perl -pi -e 's/return colors\\\\.info;/return wms.info;/' lib/widgets/wms/wms_state_views.dart)",
+      "Bash(perl -0pi -e 's/    this\\\\.accentColor = colors\\\\.primary,/    this.accentColor,/; s/  final Color accentColor;/  \\\\/\\\\/\\\\/ Optional override; falls back to the theme primary at paint time.\\\\n  final Color? accentColor;/;' lib/widgets/wms/enterprise/wms_drawer_profile_header.dart)"
     ]
   }
 }

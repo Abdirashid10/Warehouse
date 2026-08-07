@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:logisticsmobile/core/constants/wms/order_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -19,6 +18,7 @@ import 'package:logisticsmobile/widgets/app_card.dart';
 import 'package:logisticsmobile/widgets/wms/enterprise/wms_dashboard_section.dart';
 import 'package:logisticsmobile/widgets/wms/enterprise/wms_enterprise_primitives.dart';
 import 'package:logisticsmobile/widgets/wms/wms_badges.dart';
+import 'package:logisticsmobile/widgets/wms/wms_metric_pill.dart';
 
 abstract final class OrdersUi {
   static const sectionGap = WmsDesignTokens.sectionGap;
@@ -217,6 +217,7 @@ class OrdersExecutiveHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsExecutiveHeaderShell(
       title: isAdminWorkspace
           ? 'Enterprise order control'
@@ -233,25 +234,25 @@ class OrdersExecutiveHeader extends StatelessWidget {
                   label: 'Total Orders',
                   value: '${data.totalOrders}',
                   icon: Icons.shopping_cart_outlined,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
                 WmsKpiTile(
                   label: 'Pending',
                   value: '${data.pendingOrders}',
                   icon: Icons.schedule_outlined,
-                  color: AppColors.warning,
+                  color: colors.warning,
                 ),
                 WmsKpiTile(
                   label: 'In Pipeline',
                   value: '${OrdersMetrics.inPipeline(data)}',
                   icon: Icons.sync_alt_rounded,
-                  color: AppColors.info,
+                  color: colors.info,
                 ),
                 WmsKpiTile(
                   label: 'Delivered',
                   value: '${data.deliveredOrders}',
                   icon: Icons.task_alt_outlined,
-                  color: AppColors.success,
+                  color: colors.success,
                 ),
               ],
             ),
@@ -274,6 +275,7 @@ class OrdersPipelineBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final breakdown = OrdersMetrics.pipelineBreakdown(data);
     final total = breakdown.pending +
@@ -364,7 +366,7 @@ class OrdersPipelineBar extends StatelessWidget {
                   if (breakdown.cancelled > 0)
                     Expanded(
                       flex: flex(breakdown.cancelled),
-                      child: const ColoredBox(color: AppColors.error),
+                      child: ColoredBox(color: colors.error),
                     ),
                 ],
               ),
@@ -402,7 +404,7 @@ class OrdersPipelineBar extends StatelessWidget {
               ),
               if (breakdown.cancelled > 0)
                 _PipelineLegend(
-                  color: AppColors.error,
+                  color: colors.error,
                   label: 'Cancelled',
                   count: breakdown.cancelled,
                 ),
@@ -452,6 +454,7 @@ class OrdersOperationalStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return AppCard(
       elevated: true,
       padding: const EdgeInsets.symmetric(
@@ -465,7 +468,7 @@ class OrdersOperationalStrip extends StatelessWidget {
               label: 'Today',
               value: '${OrdersMetrics.ordersToday(data)}',
               icon: Icons.today_outlined,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
           ),
           _OpDivider(),
@@ -474,7 +477,7 @@ class OrdersOperationalStrip extends StatelessWidget {
               label: 'This Week',
               value: '${OrdersMetrics.ordersThisWeek(data)}',
               icon: Icons.date_range_outlined,
-              color: AppColors.info,
+              color: colors.info,
             ),
           ),
           _OpDivider(),
@@ -483,7 +486,7 @@ class OrdersOperationalStrip extends StatelessWidget {
               label: 'Fulfillment',
               value: '${OrdersMetrics.fulfillmentRate(data)}%',
               icon: Icons.verified_outlined,
-              color: AppColors.success,
+              color: colors.success,
             ),
           ),
           _OpDivider(),
@@ -492,7 +495,7 @@ class OrdersOperationalStrip extends StatelessWidget {
               label: 'Avg Process',
               value: OrdersMetrics.averageProcessingTime(data),
               icon: Icons.timer_outlined,
-              color: AppColors.accent,
+              color: colors.accent,
             ),
           ),
         ],
@@ -709,6 +712,7 @@ class OrdersStatusChipBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final selected = data.statusFilter;
 
     return SingleChildScrollView(
@@ -718,7 +722,7 @@ class OrdersStatusChipBar extends StatelessWidget {
           _StatusCountChip(
             label: 'All',
             count: data.totalOrders,
-            color: AppColors.primary,
+            color: colors.primary,
             selected: selected == null || selected.isEmpty,
             onTap: () => onStatusFilter(null),
           ),
@@ -804,13 +808,14 @@ class _OrdersFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return FilterChip(
       label: Text(label, maxLines: 1, softWrap: false),
       selected: selected,
       onSelected: (_) => onTap(),
       showCheckmark: false,
       avatar: icon != null
-          ? Icon(icon, size: WmsIconSizes.status, color: AppColors.primary)
+          ? Icon(icon, size: WmsIconSizes.status, color: colors.primary)
           : null,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -828,15 +833,16 @@ class OrdersCompactLifecycleStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (OrdersUi.isCancelled(status)) {
       return Row(
         children: [
-          Icon(Icons.cancel_outlined, size: WmsIconSizes.status, color: AppColors.error),
+          Icon(Icons.cancel_outlined, size: WmsIconSizes.status, color: colors.error),
           const SizedBox(width: 4),
           Text(
             OrdersUi.cancelledStatus,
             style: WmsDesignTokens.supportingDense(context).copyWith(
-                  color: AppColors.error,
+                  color: colors.error,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -921,6 +927,7 @@ class OrdersEnterpriseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final accent = OrdersUi.statusAccent(order.status);
 
@@ -996,7 +1003,7 @@ class OrdersEnterpriseCard extends StatelessWidget {
                     WmsFormatters.currency(order.grandTotal),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                          color: colors.primary,
                           height: 1,
                         ),
                   ),
@@ -1088,12 +1095,13 @@ class OrdersNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
-    final accent = notification.read ? wms.textSecondary : AppColors.primary;
+    final accent = notification.read ? wms.textSecondary : colors.primary;
 
     return AppCard(
       elevated: true,
-      accentColor: notification.read ? null : AppColors.primary,
+      accentColor: notification.read ? null : colors.primary,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
@@ -1154,6 +1162,7 @@ class OrdersAnalyticsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (data.orders.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1163,7 +1172,7 @@ class OrdersAnalyticsPanel extends StatelessWidget {
         ? weekly.thisWeek
         : weekly.thisWeek - weekly.lastWeek;
     final weekTrend = weekDelta >= 0 ? Icons.trending_up : Icons.trending_down;
-    final weekColor = weekDelta >= 0 ? AppColors.success : AppColors.error;
+    final weekColor = weekDelta >= 0 ? colors.success : colors.error;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1178,25 +1187,25 @@ class OrdersAnalyticsPanel extends StatelessWidget {
                 label: 'Fulfillment Rate',
                 value: '${OrdersMetrics.fulfillmentRate(data)}%',
                 icon: Icons.verified_outlined,
-                color: AppColors.success,
+                color: colors.success,
               ),
               WmsKpiTile(
                 label: 'Orders Today',
                 value: '${OrdersMetrics.ordersToday(data)}',
                 icon: Icons.today_outlined,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               WmsKpiTile(
                 label: 'This Week',
                 value: '${OrdersMetrics.ordersThisWeek(data)}',
                 icon: Icons.date_range_outlined,
-                color: AppColors.info,
+                color: colors.info,
               ),
               WmsKpiTile(
                 label: 'Avg Processing',
                 value: OrdersMetrics.averageProcessingTime(data),
                 icon: Icons.timer_outlined,
-                color: AppColors.accent,
+                color: colors.accent,
                 compactValue: true,
               ),
             ],
@@ -1222,10 +1231,10 @@ class OrdersAnalyticsPanel extends StatelessWidget {
                   child: _AnalyticsStat(
                     label: 'This week',
                     value: '${weekly.thisWeek}',
-                    color: AppColors.primary,
+                    color: colors.primary,
                   ),
                 ),
-                Container(width: 1, height: 40, color: AppColors.border),
+                Container(width: 1, height: 40, color: colors.border),
                 Expanded(
                   child: _AnalyticsStat(
                     label: 'Last week',
@@ -1233,7 +1242,7 @@ class OrdersAnalyticsPanel extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                Container(width: 1, height: 40, color: AppColors.border),
+                Container(width: 1, height: 40, color: colors.border),
                 Expanded(
                   child: Column(
                     children: [
@@ -1334,6 +1343,7 @@ class OrdersSimpleBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final data = series.take(6).toList();
     final maxY = data.fold<double>(0, (m, e) => math.max(m, e.value));
     if (data.isEmpty) return const SizedBox.shrink();
@@ -1378,7 +1388,7 @@ class OrdersSimpleBarChart extends StatelessWidget {
                   toY: data[i].value,
                   width: 16,
                   borderRadius: BorderRadius.circular(4),
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ],
             ),
@@ -1395,6 +1405,7 @@ class OrdersSimpleLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final data = series;
     if (data.isEmpty) return const SizedBox.shrink();
     final maxY = data.fold<double>(0, (m, e) => math.max(m, e.value));
@@ -1433,12 +1444,12 @@ class OrdersSimpleLineChart extends StatelessWidget {
                 FlSpot(i.toDouble(), data[i].value),
             ],
             isCurved: true,
-            color: AppColors.primary,
+            color: colors.primary,
             barWidth: 2.5,
             dotData: const FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: colors.primary.withValues(alpha: 0.08),
             ),
           ),
         ],
@@ -1457,13 +1468,14 @@ class OrdersSimplePieChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = series.where((e) => e.value > 0).toList();
     if (data.isEmpty) return const SizedBox.shrink();
-    final colors = [
-      AppColors.primary,
-      AppColors.accent,
-      AppColors.info,
-      AppColors.success,
-      AppColors.warning,
-      AppColors.error,
+    final colors = WmsUiColors.of(context);
+    final palette = [
+      colors.primary,
+      colors.accent,
+      colors.info,
+      colors.success,
+      colors.warning,
+      colors.error,
     ];
 
     return PieChart(
@@ -1476,7 +1488,7 @@ class OrdersSimplePieChart extends StatelessWidget {
               value: data[i].value,
               title: '${data[i].value.toInt()}',
               radius: 48,
-              color: colors[i % colors.length],
+              color: palette[i % palette.length],
               titleStyle: WmsDesignTokens.supportingDense(context).copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -1500,49 +1512,116 @@ class OrdersMobileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Title and primary action on one row — the two-line title, subtitle and
+    // full-width button previously took three stacked rows.
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenPadding,
         AppSpacing.sm,
         AppSpacing.screenPadding,
-        AppSpacing.xs,
+        AppSpacing.sm,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Order Operations',
-            maxLines: 2,
-            softWrap: true,
-            style: WmsDesignTokens.pageTitle(context),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Warehouse fulfillment pipeline',
-            style: WmsDesignTokens.pageSubtitle(context),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton.icon(
-              onPressed: onNewOrder,
-              icon: const Icon(Icons.add, size: WmsIconSizes.actionButton),
-              label: const Text('New Order'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Order Operations',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: WmsDesignTokens.pageTitle(context).copyWith(
+                    fontSize: 22,
+                    height: 1.2,
+                  ),
                 ),
-                textStyle: WmsDesignTokens.buttonLabel(context).copyWith(
-                      color: Colors.white,
-                    ),
-              ),
+                const SizedBox(height: 1),
+                Text(
+                  'Warehouse fulfillment pipeline',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: WmsDesignTokens.supportingDense(context).copyWith(
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          _NewOrderButton(onNewOrder: onNewOrder),
         ],
+      ),
+    );
+  }
+}
+
+/// Primary action for the orders header.
+///
+/// Collapses to an icon-only square on narrow phones so the title keeps its
+/// room.
+class _NewOrderButton extends StatelessWidget {
+  const _NewOrderButton({required this.onNewOrder});
+
+  final VoidCallback onNewOrder;
+
+  static const double _height = 40;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+    final compact =
+        MobileUi.isCompactPhone(MediaQuery.sizeOf(context).width);
+
+    final style = FilledButton.styleFrom(
+      backgroundColor: colors.primary,
+      foregroundColor: const Color(0xFFFFFFFF),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 0 : AppSpacing.md),
+      minimumSize: Size(compact ? _height : 0, _height),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+    );
+
+    if (compact) {
+      return SizedBox(
+        width: _height,
+        height: _height,
+        child: FilledButton(
+          onPressed: onNewOrder,
+          style: style,
+          child: const Icon(Icons.add_rounded, size: 20),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: _height,
+      child: FilledButton(
+        onPressed: onNewOrder,
+        style: style,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add_rounded, size: 18),
+            const SizedBox(width: 5),
+            Text(
+              'New Order',
+              maxLines: 1,
+              softWrap: false,
+              style: WmsDesignTokens.supportingDense(context).copyWith(
+                // Explicit white — the themed label color would otherwise win.
+                color: const Color(0xFFFFFFFF),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1603,50 +1682,26 @@ class OrdersMobileKpiGrid extends StatelessWidget {
       ),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-      child: GridView(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: MobileUi.phoneKpiGridDelegate(),
-        children: [
-          for (final item in items)
-            AppCard(
-              elevated: true,
-              onTap: onStatusTap != null
-                  ? () => onStatusTap!(item.status)
-                  : null,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    WmsOrderStatusBadge.iconFor(item.label),
-                    size: WmsIconSizes.kpi,
-                    color: item.color,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    '${item.value}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: WmsDesignTokens.cardNumber(context).copyWith(
-                      color: item.color,
+    // Five tall cards in a two-column grid ran three rows deep. The same five
+    // stages now scroll horizontally in one ~78dp strip, and each pill doubles
+    // as a status filter that stays in sync with the chip row below.
+    return WmsMetricPillBar(
+      metrics: [
+        for (final item in items)
+          WmsMetricPillData(
+            label: item.label,
+            value: '${item.value}',
+            icon: WmsOrderStatusBadge.iconFor(item.label),
+            color: item.color,
+            selected: data.statusFilter == item.status,
+            onTap: onStatusTap == null
+                ? null
+                // Tapping the active stage clears the filter.
+                : () => onStatusTap!(
+                      data.statusFilter == item.status ? null : item.status,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    item.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: WmsDesignTokens.kpiLabel(context),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -1678,60 +1733,102 @@ class OrdersMobileSearchSection extends StatelessWidget {
     final colors = WmsUiColors.of(context);
     final selected = data.statusFilter;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: searchController,
-            onChanged: onSearch,
-            style: WmsDesignTokens.inputText(context),
-            decoration: InputDecoration(
-              hintText: 'Search orders…',
-              hintStyle: WmsDesignTokens.body(context).copyWith(
-                color: colors.textTertiary,
-              ),
-              prefixIcon: Icon(Icons.search_rounded, color: colors.primary),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _OrdersMobileFilterChip(
-                  label: 'All',
-                  selected: selected == null || selected.isEmpty,
-                  color: AppColors.primary,
-                  onTap: () => onStatusFilter(null),
-                ),
-                for (final status in _mobileStatuses) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  _OrdersMobileFilterChip(
-                    label: status,
-                    selected: selected == status,
-                    color: WmsOrderStatusBadge.foregroundFor(status),
-                    onTap: () => onStatusFilter(
-                      selected == status ? null : status,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+    final chips = <_OrdersChipSpec>[
+      _OrdersChipSpec(
+        label: 'All',
+        selected: selected == null || selected.isEmpty,
+        color: colors.primary,
+        onTap: () => onStatusFilter(null),
       ),
+      for (final status in _mobileStatuses)
+        _OrdersChipSpec(
+          label: status,
+          selected: selected == status,
+          color: WmsOrderStatusBadge.foregroundFor(status, context),
+          onTap: () => onStatusFilter(selected == status ? null : status),
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenPadding,
+          ),
+          child: SizedBox(
+            height: _controlHeight,
+            child: TextField(
+              controller: searchController,
+              onChanged: onSearch,
+              textInputAction: TextInputAction.search,
+              style: WmsDesignTokens.body(context),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Search order number, customer',
+                hintStyle: WmsDesignTokens.description(context),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: colors.textSecondary,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+                filled: true,
+                fillColor: colors.surfaceElevated,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 0,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide(
+                    color: colors.border.withValues(alpha: 0.8),
+                    width: 0.8,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide(color: colors.primary, width: 1.5),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // Edge-to-edge so chips scroll out of the screen edge rather than
+        // stopping short at an inset.
+        SizedBox(
+          height: _chipStripHeight,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            itemCount: chips.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.xs),
+            itemBuilder: (context, index) =>
+                _OrdersMobileFilterChip(spec: chips[index]),
+          ),
+        ),
+      ],
     );
   }
+
+  static const double _controlHeight = 44;
+  static const double _chipStripHeight = 34;
 }
 
-class _OrdersMobileFilterChip extends StatelessWidget {
-  const _OrdersMobileFilterChip({
+class _OrdersChipSpec {
+  const _OrdersChipSpec({
     required this.label,
     required this.selected,
     required this.color,
@@ -1742,24 +1839,54 @@ class _OrdersMobileFilterChip extends StatelessWidget {
   final bool selected;
   final Color color;
   final VoidCallback onTap;
+}
+
+/// Compact status chip. Each stage carries its own semantic color when active,
+/// so the chip row reads as the same vocabulary as the badges on the cards.
+class _OrdersMobileFilterChip extends StatelessWidget {
+  const _OrdersMobileFilterChip({required this.spec});
+
+  final _OrdersChipSpec spec;
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    return FilterChip(
-      label: Text(
-        label,
-        style: WmsDesignTokens.body(context).copyWith(
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected ? color : colors.textSecondary,
+    final selected = spec.selected;
+    final accent = spec.color;
+    final radius = BorderRadius.circular(999);
+
+    return Material(
+      color: selected ? accent.withValues(alpha: 0.10) : colors.surface,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: spec.onTap,
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: selected
+                  ? accent.withValues(alpha: 0.45)
+                  : colors.border.withValues(alpha: 0.8),
+              width: selected ? 1.3 : 0.8,
+            ),
+          ),
+          child: Text(
+            spec.label,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: WmsDesignTokens.supportingDense(context).copyWith(
+              fontSize: 12.5,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              color: selected ? accent : colors.textSecondary,
+              height: 1.2,
+            ),
+          ),
         ),
       ),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      selectedColor: color.withValues(alpha: 0.12),
-      side: BorderSide(color: selected ? color : colors.border),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
     );
   }
 }
@@ -1783,73 +1910,195 @@ class OrdersMobileCard extends StatelessWidget {
     final created = order.createdAt;
     final dateLabel = created != null ? _shortMonthDay(created) : '—';
 
+
+    // Three bands: identity, party, money — each on one line, divided rather
+    // than stacked. The previous card ran seven separate rows, several of them
+    // two-line, before the action button.
     return AppCard(
       elevated: true,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            order.orderNumber,
-            style: WmsDesignTokens.cardTitle(context).copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  order.orderNumber,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: WmsDesignTokens.cardTitle(context).copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              WmsOrderStatusBadge(status: order.status, compact: true),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            order.customerName,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.body(context),
+          Divider(
+            height: 1,
+            thickness: 0.8,
+            color: colors.border.withValues(alpha: 0.6),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            warehouse,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.pageSubtitle(context).copyWith(
-              color: colors.textSecondary,
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          _OrderMetaRow(
+            icon: Icons.person_outline_rounded,
+            label: order.customerName,
           ),
-          const SizedBox(height: AppSpacing.md),
-          WmsOrderStatusBadge(status: order.status),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            WmsFormatters.currency(order.grandTotal),
-            style: WmsDesignTokens.cardNumber(context).copyWith(
-              color: AppColors.primary,
-            ),
+          const SizedBox(height: 4),
+          _OrderMetaRow(
+            icon: Icons.place_outlined,
+            label: warehouse,
+            muted: true,
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            dateLabel,
-            style: WmsDesignTokens.pageSubtitle(context).copyWith(
-              color: colors.textSecondary,
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    WmsFormatters.currency(order.grandTotal),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: WmsDesignTokens.cardNumber(context).copyWith(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                      letterSpacing: -0.4,
+                      // Deliberately neutral: tinting the amount by status
+                      // reads as a payment state, which it is not. The badge
+                      // owns status; the money stays the strongest neutral.
+                      color: colors.textPrimary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.event_outlined,
+                    size: 13,
+                    color: colors.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    dateLabel,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: WmsDesignTokens.supportingDense(context).copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           SizedBox(
             width: double.infinity,
-            height: 44,
-            child: OutlinedButton.icon(
+            height: 38,
+            child: OutlinedButton(
               onPressed: onTap,
-              icon: Icon(Icons.visibility_outlined, size: WmsIconSizes.actionButton),
-              label: const Text('View Details'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.35)),
+                foregroundColor: colors.primary,
+                padding: EdgeInsets.zero,
+                side: BorderSide(
+                  color: colors.primary.withValues(alpha: 0.30),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.visibility_outlined,
+                    size: 16,
+                    color: colors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'View Details',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: WmsDesignTokens.supportingDense(context).copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      height: 1.2,
                     ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: colors.primary,
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Icon + single-line label used for the customer and location rows.
+class _OrderMetaRow extends StatelessWidget {
+  const _OrderMetaRow({
+    required this.icon,
+    required this.label,
+    this.muted = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 14, color: colors.textSecondary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: WmsDesignTokens.supportingDense(context).copyWith(
+              fontSize: muted ? 12 : 13,
+              fontWeight: muted ? FontWeight.w500 : FontWeight.w600,
+              color: muted ? colors.textSecondary : colors.textPrimary,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/constants/wms/order_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
@@ -65,7 +65,8 @@ class _TimelineStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isComplete || isCurrent ? AppColors.primary : AppColors.border;
+    final colors = WmsUiColors.of(context);
+    final color = isComplete || isCurrent ? colors.primary : colors.border;
     final icon = isComplete
         ? Icons.check_circle
         : isCurrent
@@ -84,7 +85,7 @@ class _TimelineStep extends StatelessWidget {
                   child: Container(
                     width: 2,
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    color: isComplete ? AppColors.primary : AppColors.border,
+                    color: isComplete ? colors.primary : colors.border,
                   ),
                 ),
             ],

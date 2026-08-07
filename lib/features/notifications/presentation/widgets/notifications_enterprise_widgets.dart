@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
@@ -104,18 +104,18 @@ abstract final class NotificationUi {
     }
   }
 
-  static Color categoryColor(NotificationCategoryFilter category) {
+  static Color categoryColor(NotificationCategoryFilter category, WmsUiColors colors) {
     switch (category) {
       case NotificationCategoryFilter.all:
-        return AppColors.primary;
+        return colors.primary;
       case NotificationCategoryFilter.inventory:
-        return AppColors.warning;
+        return colors.warning;
       case NotificationCategoryFilter.orders:
-        return AppColors.info;
+        return colors.info;
       case NotificationCategoryFilter.tasks:
         return const Color(0xFF7C3AED);
       case NotificationCategoryFilter.warehouses:
-        return AppColors.accent;
+        return colors.accent;
       case NotificationCategoryFilter.system:
         return AppThemeColors.lightTextSecondary;
     }
@@ -178,14 +178,14 @@ abstract final class NotificationUi {
     return NotificationPriority.low;
   }
 
-  static Color priorityColor(NotificationPriority priority) {
+  static Color priorityColor(NotificationPriority priority, WmsUiColors colors) {
     switch (priority) {
       case NotificationPriority.critical:
-        return AppColors.error;
+        return colors.error;
       case NotificationPriority.high:
-        return AppColors.warning;
+        return colors.warning;
       case NotificationPriority.medium:
-        return AppColors.info;
+        return colors.info;
       case NotificationPriority.low:
         return AppThemeColors.lightTextSecondary;
     }
@@ -355,6 +355,7 @@ class NotificationsCommandCenterHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final unread = data.effectiveUnreadCount;
 
     return WmsExecutiveHeaderShell(
@@ -384,25 +385,25 @@ class NotificationsCommandCenterHeader extends StatelessWidget {
                   label: 'Total Alerts',
                   value: '${data.items.length}',
                   icon: Icons.notifications_outlined,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
                 WmsKpiTile(
                   label: 'Unread',
                   value: '$unread',
                   icon: Icons.mark_email_unread_outlined,
-                  color: unread > 0 ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: unread > 0 ? colors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 WmsKpiTile(
                   label: 'Critical',
                   value: '${NotificationMetrics.criticalCount(data)}',
                   icon: Icons.error_outline_rounded,
-                  color: AppColors.error,
+                  color: colors.error,
                 ),
                 WmsKpiTile(
                   label: 'Alerts Today',
                   value: '${NotificationMetrics.alertsToday(data)}',
                   icon: Icons.today_outlined,
-                  color: AppColors.info,
+                  color: colors.info,
                 ),
               ],
             ),
@@ -428,6 +429,7 @@ class NotificationsSeverityBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final breakdown = NotificationMetrics.severityBreakdown(items);
     final total =
@@ -472,6 +474,7 @@ class NotificationsSeverityBar extends StatelessWidget {
                       child: ColoredBox(
                         color: NotificationUi.priorityColor(
                           NotificationPriority.critical,
+                          colors,
                         ),
                       ),
                     ),
@@ -481,6 +484,7 @@ class NotificationsSeverityBar extends StatelessWidget {
                       child: ColoredBox(
                         color: NotificationUi.priorityColor(
                           NotificationPriority.high,
+                          colors,
                         ),
                       ),
                     ),
@@ -490,6 +494,7 @@ class NotificationsSeverityBar extends StatelessWidget {
                       child: ColoredBox(
                         color: NotificationUi.priorityColor(
                           NotificationPriority.medium,
+                          colors,
                         ),
                       ),
                     ),
@@ -499,6 +504,7 @@ class NotificationsSeverityBar extends StatelessWidget {
                       child: ColoredBox(
                         color: NotificationUi.priorityColor(
                           NotificationPriority.low,
+                          colors,
                         ),
                       ),
                     ),
@@ -543,7 +549,8 @@ class _SeverityLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = NotificationUi.priorityColor(priority);
+    final colors = WmsUiColors.of(context);
+    final color = NotificationUi.priorityColor(priority, colors);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -569,6 +576,7 @@ class NotificationsModuleStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return AppCard(
       elevated: true,
       padding: const EdgeInsets.symmetric(
@@ -582,7 +590,7 @@ class NotificationsModuleStrip extends StatelessWidget {
               label: 'Inventory',
               count: data.inventoryItems.length,
               unread: data.unreadFor(NotificationCategoryFilter.inventory),
-              color: AppColors.warning,
+              color: colors.warning,
               icon: Icons.inventory_2_outlined,
             ),
           ),
@@ -602,7 +610,7 @@ class NotificationsModuleStrip extends StatelessWidget {
               label: 'Orders',
               count: data.orderItems.length,
               unread: data.unreadFor(NotificationCategoryFilter.orders),
-              color: AppColors.info,
+              color: colors.info,
               icon: Icons.shopping_cart_outlined,
             ),
           ),
@@ -612,7 +620,7 @@ class NotificationsModuleStrip extends StatelessWidget {
               label: 'Warehouse',
               count: data.warehouseItems.length,
               unread: data.unreadFor(NotificationCategoryFilter.warehouses),
-              color: AppColors.accent,
+              color: colors.accent,
               icon: Icons.warehouse_outlined,
             ),
           ),
@@ -651,6 +659,7 @@ class _ModuleStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Column(
       children: [
         Stack(
@@ -663,8 +672,8 @@ class _ModuleStat extends StatelessWidget {
                 top: -4,
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
+                  decoration: BoxDecoration(
+                    color: colors.error,
                     shape: BoxShape.circle,
                   ),
                   constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
@@ -737,6 +746,7 @@ class NotificationsFilterPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final unread = data.effectiveUnreadCount;
 
@@ -772,9 +782,9 @@ class NotificationsFilterPanel extends StatelessWidget {
                 avatar: Icon(
                   Icons.mark_email_unread_outlined,
                   size: WmsIconSizes.status,
-                  color: unreadOnly ? AppColors.primary : wms.textSecondary,
+                  color: unreadOnly ? colors.primary : wms.textSecondary,
                 ),
-                selectedColor: AppColors.primaryLight,
+                selectedColor: colors.primaryMuted,
                 visualDensity: VisualDensity.compact,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -811,7 +821,7 @@ class NotificationsFilterPanel extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   WmsEnterpriseFilterChip(
                     label: NotificationUi.priorityLabel(p),
-                    color: NotificationUi.priorityColor(p),
+                    color: NotificationUi.priorityColor(p, colors),
                     selected: priority == p,
                     onTap: () => onPrioritySelected(priority == p ? null : p),
                   ),
@@ -843,11 +853,12 @@ class NotificationsEnterpriseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final module = NotificationUi.categoryFor(notification);
     final priority = NotificationUi.priorityFor(notification);
-    final priorityColor = NotificationUi.priorityColor(priority);
-    final moduleColor = NotificationUi.categoryColor(module);
+    final priorityColor = NotificationUi.priorityColor(priority, colors);
+    final moduleColor = NotificationUi.categoryColor(module, colors);
 
     return AppCard(
       onTap: onTap,
@@ -985,7 +996,8 @@ class _PriorityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = NotificationUi.priorityColor(priority);
+    final colors = WmsUiColors.of(context);
+    final color = NotificationUi.priorityColor(priority, colors);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -1022,6 +1034,7 @@ class NotificationsTimeGroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -1041,14 +1054,14 @@ class NotificationsTimeGroupSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
+                  color: colors.primaryMuted,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
                   '${items.length}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                        color: colors.primary,
                       ),
                 ),
               ),
@@ -1136,11 +1149,12 @@ class NotificationsEnterpriseSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (items.isEmpty) return const SizedBox.shrink();
 
     final sorted = sortNotificationsForDisplay(items, data);
     final unread = sorted.where((n) => !data.isRead(n)).length;
-    final color = NotificationUi.categoryColor(category);
+    final color = NotificationUi.categoryColor(category, colors);
 
     return WmsDashboardSection(
       title: title,

@@ -73,9 +73,13 @@ class WmsThemeExtension extends ThemeExtension<WmsThemeExtension> {
     textTertiary: AppThemeColors.darkTextTertiary,
     success: AppThemeColors.successDark,
     successLight: Color(0xFF14532D),
-    warning: AppThemeColors.warning,
+    // Warning and error carry the *brightened* dark-mode inks, matching how
+    // success and info are already handled. The light-mode swatches (#EA580C /
+    // #DC2626) measured 2.5:1 and 3.1:1 against their own dark chips — below
+    // the 3:1 floor for a label sitting inside its tint.
+    warning: Color(0xFFFBBF24),
     warningLight: Color(0xFF78350F),
-    error: AppThemeColors.danger,
+    error: Color(0xFFF87171),
     errorLight: Color(0xFF7F1D1D),
     info: Color(0xFF38BDF8),
     infoLight: Color(0xFF0C4A6E),
@@ -201,9 +205,17 @@ class WmsThemeExtension extends ThemeExtension<WmsThemeExtension> {
       accentLight: Color.lerp(accentLight, other.accentLight, t)!,
       tasks: Color.lerp(tasks, other.tasks, t)!,
       tasksLight: Color.lerp(tasksLight, other.tasksLight, t)!,
-      brandGradient: brandGradient,
-      splashGradient: splashGradient,
-      cardShadow: cardShadow,
+      // Gradients and shadows are interpolated too. Snapping these while every
+      // flat colour glides produces a visible pop on the largest surfaces on
+      // screen — exactly the flash a theme transition is meant to avoid.
+      brandGradient:
+          LinearGradient.lerp(brandGradient, other.brandGradient, t) ??
+              brandGradient,
+      splashGradient:
+          LinearGradient.lerp(splashGradient, other.splashGradient, t) ??
+              splashGradient,
+      cardShadow:
+          BoxShadow.lerpList(cardShadow, other.cardShadow, t) ?? cardShadow,
     );
   }
 }

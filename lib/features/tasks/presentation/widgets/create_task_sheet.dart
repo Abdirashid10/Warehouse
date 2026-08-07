@@ -480,6 +480,12 @@ class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.context, this.text);
 
   final BuildContext context;
+
+  /// Theme-resolved palette for this section tree.
+  ///
+  /// Exposed as a getter so every section method reads the live theme rather
+  /// than a colour captured when the holder was constructed.
+  WmsUiColors get colors => WmsUiColors.of(context);
   final String text;
 
   @override

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logisticsmobile/core/constants/app_constants.dart';
 import 'package:logisticsmobile/core/settings/theme_preferences.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
-import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_theme_extension.dart';
 import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
@@ -13,7 +11,7 @@ import 'package:logisticsmobile/core/utils/wms_formatters.dart';
 import 'package:logisticsmobile/features/profile/domain/entities/user_profile.dart';
 import 'package:logisticsmobile/routes/route_names.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
-import 'package:logisticsmobile/widgets/wms/enterprise/wms_dashboard_section.dart';
+import 'package:logisticsmobile/widgets/wms/wms_metric_pill.dart';
 
 abstract final class ProfileUi {
   static const sectionGap = WmsDesignTokens.sectionGap;
@@ -31,20 +29,20 @@ abstract final class ProfileUi {
   static double avatarSize(double width) =>
       width <= MobileUi.compactWidth ? 48.0 : 52.0;
 
-  static Color roleColor(String role) {
+  static Color roleColor(String role, WmsUiColors colors) {
     final lower = role.toLowerCase();
-    if (lower.contains('admin')) return AppColors.info;
-    if (lower.contains('supervisor')) return AppColors.accent;
-    return AppColors.primary;
+    if (lower.contains('admin')) return colors.info;
+    if (lower.contains('supervisor')) return colors.accent;
+    return colors.primary;
   }
 
-  static Color statusColor(String status) {
+  static Color statusColor(String status, WmsUiColors colors) {
     final lower = status.toLowerCase();
-    if (lower.contains('active')) return AppColors.success;
+    if (lower.contains('active')) return colors.success;
     if (lower.contains('suspend') || lower.contains('inactive')) {
-      return AppColors.error;
+      return colors.error;
     }
-    return AppColors.warning;
+    return colors.warning;
   }
 }
 
@@ -81,10 +79,11 @@ abstract final class ProfileMetrics {
 
 abstract final class ProfileConfirmDialogs {
   static Future<bool> confirmLogout(BuildContext context) async {
+    final colors = WmsUiColors.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+        icon: Icon(Icons.logout_rounded, color: colors.error),
         title: const Text('Sign out?'),
         content: const Text(
           'You will end your secure warehouse session. Unsaved work may be lost.',
@@ -96,7 +95,7 @@ abstract final class ProfileConfirmDialogs {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
             child: const Text('Sign out'),
           ),
         ],
@@ -106,10 +105,11 @@ abstract final class ProfileConfirmDialogs {
   }
 
   static Future<bool> confirmChangePassword(BuildContext context) async {
+    final colors = WmsUiColors.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.lock_outline, color: AppColors.primary),
+        icon: Icon(Icons.lock_outline, color: colors.primary),
         title: const Text('Change password?'),
         content: const Text(
           'You will be asked to enter your current password and choose a new one.',
@@ -134,10 +134,11 @@ abstract final class ProfileConfirmDialogs {
     required String title,
     required String message,
   }) async {
+    final colors = WmsUiColors.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.security_outlined, color: AppColors.warning),
+        icon: Icon(Icons.security_outlined, color: colors.warning),
         title: Text(title),
         content: Text(message),
         actions: [
@@ -238,9 +239,10 @@ class ProfileCommandCenterHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final colors = WmsUiColors.of(context);
     final avatarSize = ProfileUi.avatarSize(width);
-    final roleColor = ProfileUi.roleColor(roleLabel);
-    final statusColor = ProfileUi.statusColor(accountStatus);
+    final roleColor = ProfileUi.roleColor(roleLabel, colors);
+    final statusColor = ProfileUi.statusColor(accountStatus, colors);
 
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
@@ -250,91 +252,122 @@ class ProfileCommandCenterHeader extends StatelessWidget {
         AppSpacing.screenPadding,
         MobileUi.headerBottomGap(width),
       ),
-      child: AppCard(
-        elevated: true,
+      // Hero banner: a soft role-tinted wash behind the identity block, so the
+      // header reads as one cohesive surface rather than a plain white card.
+      child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: avatarSize,
-              height: avatarSize,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [roleColor, roleColor.withValues(alpha: 0.82)],
-                ),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                boxShadow: [
-                  BoxShadow(
-                    color: roleColor.withValues(alpha: 0.22),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                ProfileUi.initials(displayName),
-                style: WmsDesignTokens.cardTitle(context).copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              roleColor.withValues(alpha: colors.isDark ? 0.22 : 0.10),
+              roleColor.withValues(alpha: colors.isDark ? 0.10 : 0.03),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(color: roleColor.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: roleColor.withValues(alpha: colors.isDark ? 0.22 : 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+              spreadRadius: -6,
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Profile & settings',
-                    style: WmsDesignTokens.supportingDense(context).copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: WmsDesignTokens.pageTitle(context).copyWith(
-                          fontSize: 18,
-                          height: 1.15,
-                        ),
-                  ),
-                  if (username != null && username!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '@$username',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: WmsDesignTokens.supporting(context),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [roleColor, roleColor.withValues(alpha: 0.82)],
                     ),
-                  ],
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: [
-                      _ProfileChip(
-                        icon: Icons.badge_outlined,
-                        label: roleLabel,
-                        color: roleColor,
-                      ),
-                      _ProfileChip(
-                        icon: Icons.warehouse_outlined,
-                        label: warehouseLabel,
-                        color: AppColors.accent,
-                      ),
-                      _ProfileChip(
-                        icon: Icons.verified_user_outlined,
-                        label: accountStatus,
-                        color: statusColor,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    boxShadow: [
+                      BoxShadow(
+                        color: roleColor.withValues(alpha: 0.28),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
                     ],
+                  ),
+                  child: Text(
+                    ProfileUi.initials(displayName),
+                    style: WmsDesignTokens.cardTitle(context).copyWith(
+                      color: const Color(0xFFFFFFFF),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayName,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: WmsDesignTokens.pageTitle(context).copyWith(
+                          fontSize: 19,
+                          height: 1.2,
+                        ),
+                      ),
+                      if (username != null && username!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '@$username',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: WmsDesignTokens.supportingDense(context)
+                              .copyWith(height: 1.25),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // One scrollable line. As a Wrap these three chips ran onto two or
+            // three rows once a warehouse name was long, which is exactly the
+            // clutter the hero is meant to avoid.
+            SizedBox(
+              height: 26,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _ProfileChip(
+                    icon: Icons.badge_outlined,
+                    label: roleLabel,
+                    color: roleColor,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  _ProfileChip(
+                    icon: Icons.verified_user_outlined,
+                    label: accountStatus,
+                    color: statusColor,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  _ProfileChip(
+                    icon: Icons.warehouse_outlined,
+                    label: warehouseLabel,
+                    color: colors.accent,
                   ),
                 ],
               ),
@@ -355,56 +388,38 @@ class ProfileAccountStatsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WmsDashboardSection(
-      title: 'Account Statistics',
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
-          return Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              SizedBox(
-                width: tileWidth,
-                child: _StatTile(
-                  label: 'Tasks Completed',
-                  value: '${ProfileMetrics.tasksCompleted(profile)}',
-                  color: const Color(0xFF7C3AED),
-                  icon: Icons.assignment_turned_in_outlined,
-                ),
-              ),
-              SizedBox(
-                width: tileWidth,
-                child: _StatTile(
-                  label: 'Orders Managed',
-                  value: '${ProfileMetrics.ordersManaged(profile)}',
-                  color: AppColors.info,
-                  icon: Icons.shopping_cart_outlined,
-                ),
-              ),
-              SizedBox(
-                width: tileWidth,
-                child: _StatTile(
-                  label: 'Inventory Actions',
-                  value: '${ProfileMetrics.inventoryActions(profile)}',
-                  color: AppColors.warning,
-                  icon: Icons.inventory_2_outlined,
-                ),
-              ),
-              SizedBox(
-                width: tileWidth,
-                child: _StatTile(
-                  label: 'Last Activity',
-                  value: ProfileMetrics.lastActivityLabel(profile),
-                  color: AppColors.primary,
-                  icon: Icons.schedule_outlined,
-                  compactValue: true,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+    final colors = WmsUiColors.of(context);
+    // Same scrollable strip the inventory, products, orders and tasks screens
+    // use, so account stats read as part of one system.
+    return WmsMetricPillBar(
+      // The hosting sliver already applies the screen inset.
+      padding: EdgeInsets.zero,
+      metrics: [
+        WmsMetricPillData(
+          label: 'Tasks Completed',
+          value: '${ProfileMetrics.tasksCompleted(profile)}',
+          icon: Icons.assignment_turned_in_outlined,
+          color: const Color(0xFF7C3AED),
+        ),
+        WmsMetricPillData(
+          label: 'Orders Managed',
+          value: '${ProfileMetrics.ordersManaged(profile)}',
+          icon: Icons.shopping_cart_outlined,
+          color: colors.info,
+        ),
+        WmsMetricPillData(
+          label: 'Inventory Actions',
+          value: '${ProfileMetrics.inventoryActions(profile)}',
+          icon: Icons.inventory_2_outlined,
+          color: colors.warning,
+        ),
+        WmsMetricPillData(
+          label: 'Last Activity',
+          value: ProfileMetrics.lastActivityLabel(profile),
+          icon: Icons.schedule_outlined,
+          color: colors.primary,
+        ),
+      ],
     );
   }
 }
@@ -427,6 +442,7 @@ class ProfileAccountInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return ProfileSettingsSection(
       title: 'Account Information',
       children: [
@@ -434,8 +450,8 @@ class ProfileAccountInfoSection extends StatelessWidget {
           icon: Icons.mail_outline_rounded,
           title: 'Email',
           subtitle: email,
-          iconColor: AppColors.info,
-          iconBackground: AppColors.infoLight,
+          iconColor: colors.info,
+          iconBackground: colors.infoMuted,
           showChevron: false,
         ),
         if (phone != null && phone!.isNotEmpty)
@@ -443,32 +459,35 @@ class ProfileAccountInfoSection extends StatelessWidget {
             icon: Icons.phone_outlined,
             title: 'Phone Number',
             subtitle: phone,
-            iconColor: AppColors.primary,
-            iconBackground: AppColors.primaryLight,
+            iconColor: colors.primary,
+            iconBackground: colors.primaryMuted,
             showChevron: false,
           ),
         ProfileActionTile(
           icon: Icons.badge_outlined,
           title: 'Role',
           subtitle: roleLabel,
-          iconColor: ProfileUi.roleColor(roleLabel),
-          iconBackground: ProfileUi.roleColor(roleLabel).withValues(alpha: 0.12),
+          iconColor: ProfileUi.roleColor(roleLabel, colors),
+          iconBackground: ProfileUi.roleColor(roleLabel, colors).withValues(alpha: 0.12),
           showChevron: false,
         ),
         ProfileActionTile(
           icon: Icons.warehouse_outlined,
           title: 'Assigned Warehouse',
           subtitle: warehouseLabel,
-          iconColor: AppColors.accent,
-          iconBackground: AppColors.accentLight,
+          iconColor: colors.accent,
+          iconBackground: colors.accentMuted,
           showChevron: false,
         ),
         ProfileActionTile(
           icon: Icons.login_rounded,
           title: 'Last Login',
           subtitle: lastLogin,
-          iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          iconBackground: AppColors.background,
+          iconColor: WmsUiColors.of(context).textSecondary,
+          // A visible neutral tint: colors.background is near-white and
+          // vanished against the card, leaving one icon box unstyled among
+          // four tinted ones.
+          iconBackground: WmsUiColors.of(context).mutedSurface,
           showChevron: false,
         ),
       ],
@@ -488,6 +507,7 @@ class ProfileSecuritySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return ProfileSettingsSection(
       title: 'Account Security',
       children: [
@@ -495,8 +515,8 @@ class ProfileSecuritySection extends StatelessWidget {
           icon: Icons.lock_outline_rounded,
           title: 'Change Password',
           subtitle: 'Update your sign-in credentials',
-          iconColor: AppColors.primary,
-          iconBackground: AppColors.primaryLight,
+          iconColor: colors.primary,
+          iconBackground: colors.primaryMuted,
           onTap: () async {
             final confirmed =
                 await ProfileConfirmDialogs.confirmChangePassword(context);
@@ -509,8 +529,8 @@ class ProfileSecuritySection extends StatelessWidget {
           icon: Icons.security_outlined,
           title: 'Security Settings',
           subtitle: 'Two-factor authentication & session policies',
-          iconColor: AppColors.warning,
-          iconBackground: AppColors.warningLight,
+          iconColor: colors.warning,
+          iconBackground: colors.warningMuted,
           onTap: () async {
             final confirmed = await ProfileConfirmDialogs.confirmSecurityAction(
               context,
@@ -532,8 +552,8 @@ class ProfileSecuritySection extends StatelessWidget {
           icon: Icons.devices_outlined,
           title: 'Active Sessions',
           subtitle: 'Review devices signed into your account',
-          iconColor: AppColors.info,
-          iconBackground: AppColors.infoLight,
+          iconColor: colors.info,
+          iconBackground: colors.infoMuted,
           onTap: () async {
             final confirmed = await ProfileConfirmDialogs.confirmSecurityAction(
               context,
@@ -557,8 +577,8 @@ class ProfileSecuritySection extends StatelessWidget {
           icon: Icons.logout_rounded,
           title: 'Logout',
           subtitle: 'End your secure warehouse session',
-          iconColor: AppColors.error,
-          iconBackground: AppColors.errorLight,
+          iconColor: colors.error,
+          iconBackground: colors.errorMuted,
           trailing: isLoggingOut
               ? const SizedBox(
                   width: 18,
@@ -701,6 +721,7 @@ class ProfileShortcutsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return ProfileSettingsSection(
       title: 'Enterprise Shortcuts',
       children: [
@@ -709,16 +730,16 @@ class ProfileShortcutsSection extends StatelessWidget {
             icon: Icons.admin_panel_settings_outlined,
             title: 'Administration Center',
             subtitle: 'Users, roles, audit, notifications',
-            iconColor: AppColors.info,
-            iconBackground: AppColors.infoLight,
+            iconColor: colors.info,
+            iconBackground: colors.infoMuted,
             onTap: onAdministration!,
           ),
           ProfileActionTile(
             icon: Icons.category_outlined,
             title: 'Products Catalog',
             subtitle: 'SKU catalog and product master data',
-            iconColor: AppColors.warning,
-            iconBackground: AppColors.warningLight,
+            iconColor: colors.warning,
+            iconBackground: colors.warningMuted,
             onTap: onProducts!,
           ),
         ],
@@ -734,16 +755,16 @@ class ProfileShortcutsSection extends StatelessWidget {
           icon: Icons.shopping_cart_outlined,
           title: 'My Orders',
           subtitle: 'Order queue and fulfillment status',
-          iconColor: AppColors.info,
-          iconBackground: AppColors.infoLight,
+          iconColor: colors.info,
+          iconBackground: colors.infoMuted,
           onTap: onOrders,
         ),
         ProfileActionTile(
           icon: Icons.history_rounded,
           title: 'Activity History',
           subtitle: 'Recent operational events and movements',
-          iconColor: AppColors.accent,
-          iconBackground: AppColors.accentLight,
+          iconColor: colors.accent,
+          iconBackground: colors.accentMuted,
           onTap: onActivity,
         ),
         if (showAuditLogs)
@@ -751,8 +772,8 @@ class ProfileShortcutsSection extends StatelessWidget {
             icon: Icons.fact_check_outlined,
             title: 'Audit Logs',
             subtitle: 'Compliance trail and system changes',
-            iconColor: AppColors.error,
-            iconBackground: AppColors.errorLight,
+            iconColor: colors.error,
+            iconBackground: colors.errorMuted,
             onTap: onAuditLogs!,
           ),
       ],
@@ -826,20 +847,51 @@ class ProfileSettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WmsDashboardSection(
-      title: title,
-      child: AppCard(
-        elevated: true,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) const Divider(height: 1, indent: 56),
-              children[i],
-            ],
-          ],
+    final wms = context.wms;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Small uppercase eyebrow rather than the accent-rail section header —
+        // four of these stack on this screen, so the lighter treatment keeps
+        // the page from reading as four competing headings.
+        Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: 6),
+          child: Text(
+            title.toUpperCase(),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: WmsDesignTokens.supportingDense(context).copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+              height: 1.3,
+            ),
+          ),
         ),
-      ),
+        AppCard(
+          elevated: true,
+          padding: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 0.8,
+                    // Aligned to the text column, not an arbitrary 56dp.
+                    indent: ProfileActionTile.dividerIndent,
+                    color: wms.border.withValues(alpha: 0.6),
+                  ),
+                children[i],
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -851,8 +903,8 @@ class ProfileActionTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
-    this.iconColor = AppColors.primary,
-    this.iconBackground = AppColors.primaryLight,
+    this.iconColor,
+    this.iconBackground,
     this.trailing,
     this.showChevron = true,
   });
@@ -861,18 +913,34 @@ class ProfileActionTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
-  final Color iconColor;
-  final Color iconBackground;
+  /// Optional override; defaults to the theme primary at paint time. A const
+  /// default cannot read the theme, which is how the light-mode swatch got
+  /// baked in here.
+  final Color? iconColor;
+
+  /// Optional override; defaults to the theme primary tint at paint time.
+  final Color? iconBackground;
   final Widget? trailing;
   final bool showChevron;
+
+  /// Leading icon box. Sized so the tile stays ~56dp — the previous 16dp
+  /// padding around a 34dp glyph produced a 66dp box on its own, making every
+  /// tile taller than a comfortable list row.
+  static const double iconBoxSize = 36;
+
+  /// Left inset for the divider between tiles, aligned to the text column.
+  static const double dividerIndent =
+      AppSpacing.md + iconBoxSize + AppSpacing.md;
 
   @override
   Widget build(BuildContext context) {
     final wms = context.wms;
+    final colors = WmsUiColors.of(context);
+    final resolvedIconColor = iconColor ?? colors.primary;
+    final resolvedIconBackground = iconBackground ?? colors.primaryMuted;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -882,46 +950,62 @@ class ProfileActionTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
+              width: iconBoxSize,
+              height: iconBoxSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: iconBackground,
+                color: resolvedIconBackground,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
-              padding: const EdgeInsets.all(WmsIconSizes.iconCardPadding),
-              child: Icon(icon, size: WmsIconSizes.kpi, color: iconColor),
+              child: Icon(icon, size: 18, color: resolvedIconColor),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
                     maxLines: 1,
+                    softWrap: false,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: WmsDesignTokens.body(context).copyWith(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
+                    // Single line: two-line subtitles gave neighbouring tiles
+                    // different heights and a ragged left rail.
                     Text(
                       subtitle!,
-                      maxLines: 2,
+                      maxLines: 1,
+                      softWrap: false,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: wms.textSecondary,
-                            height: 1.25,
-                          ),
+                      style: WmsDesignTokens.supportingDense(context).copyWith(
+                        color: wms.textSecondary,
+                        fontSize: 12,
+                        height: 1.25,
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
-            if (trailing != null)
-              trailing!
-            else if (showChevron && onTap != null)
-              Icon(Icons.chevron_right_rounded, color: wms.textTertiary, size: 20),
+            if (trailing != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              trailing!,
+            ] else if (showChevron && onTap != null) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: wms.textTertiary,
+                size: 18,
+              ),
+            ],
           ],
         ),
       ),
@@ -962,10 +1046,11 @@ class _ProfileChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
@@ -973,15 +1058,22 @@ class _ProfileChip extends StatelessWidget {
         children: [
           Icon(icon, size: 11, color: color),
           const SizedBox(width: 4),
-          Flexible(
+          // A hard cap rather than Flexible: these chips live in a horizontally
+          // scrolling strip, where the incoming width is unbounded and a flex
+          // child would throw.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
             child: Text(
               label,
               maxLines: 1,
+              softWrap: false,
               overflow: TextOverflow.ellipsis,
               style: WmsDesignTokens.supportingDense(context).copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 11.5,
+                height: 1.2,
+              ),
             ),
           ),
         ],
@@ -990,48 +1082,3 @@ class _ProfileChip extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-    this.compactValue = false,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-  final bool compactValue;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    return AppCard(
-      elevated: true,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: WmsDesignTokens.kpiIconSize, color: color),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            maxLines: compactValue ? 2 : 1,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.kpiValue(context, width: width).copyWith(
-                  fontSize: compactValue
-                      ? WmsDesignTokens.kpiNumberSize(width) - 6
-                      : null,
-                ),
-          ),
-          Text(
-            label,
-            style: WmsDesignTokens.kpiLabel(context),
-          ),
-        ],
-      ),
-    );
-  }
-}

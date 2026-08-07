@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -442,13 +441,14 @@ class _HeaderAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.primaryLight,
+        color: colors.primaryMuted,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(color: primary.withValues(alpha: 0.25), width: 2),
       ),

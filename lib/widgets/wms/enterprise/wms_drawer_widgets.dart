@@ -126,16 +126,23 @@ class WmsDrawerSignOut extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Divider(height: 1, color: colors.divider),
-        Padding(
-          padding: const EdgeInsets.all(WmsDrawerLayout.signOutPadding),
-          child: WmsDrawerMenuTile(
-            icon: Icons.logout_rounded,
-            label: 'Sign out',
-            selected: false,
-            onTap: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(const AuthLogoutRequested());
-            },
+        // A Drawer does not inset its own content, so on a device with a
+        // gesture bar the sign-out row sat underneath it and was clipped. The
+        // SafeArea wraps only the padded tile, so the divider still spans the
+        // full width while the touch target clears the system bar.
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(WmsDrawerLayout.signOutPadding),
+            child: WmsDrawerMenuTile(
+              icon: Icons.logout_rounded,
+              label: 'Sign out',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                context.read<AuthBloc>().add(const AuthLogoutRequested());
+              },
+            ),
           ),
         ),
       ],

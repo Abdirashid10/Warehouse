@@ -18,13 +18,24 @@ class ThemePreferences {
     return ThemePreferences(prefs);
   }
 
+  /// The stored preference, or [AppThemePreference.system] when the user has
+  /// never chosen one.
+  ///
+  /// Following the OS is the correct default: a device in dark mode that opens
+  /// this app to a white screen reads as a bug, and the user should not have to
+  /// set the same preference twice.
   AppThemePreference get themePreference {
     final value = _prefs.getString(ThemePreferenceKeys.themeMode);
     return AppThemePreference.values.firstWhere(
       (e) => e.name == value,
-      orElse: () => AppThemePreference.light,
+      orElse: () => AppThemePreference.system,
     );
   }
+
+  /// Whether the user has explicitly chosen a mode, as opposed to inheriting
+  /// the system setting.
+  bool get hasExplicitPreference =>
+      _prefs.getString(ThemePreferenceKeys.themeMode) != null;
 
   Future<void> setThemePreference(AppThemePreference preference) {
     return _prefs.setString(ThemePreferenceKeys.themeMode, preference.name);

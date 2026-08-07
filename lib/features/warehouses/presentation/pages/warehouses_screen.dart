@@ -6,15 +6,17 @@ import 'package:logisticsmobile/core/di/staff_scope_init_mixin.dart';
 import 'package:logisticsmobile/core/presentation/resource_state.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
-import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:logisticsmobile/features/warehouses/domain/entities/warehouse.dart';
 import 'package:logisticsmobile/features/warehouses/presentation/cubit/warehouses_cubit.dart';
+import 'package:logisticsmobile/features/warehouses/presentation/widgets/warehouse_form_dialog.dart';
+import 'package:logisticsmobile/features/warehouses/presentation/widgets/warehouse_premium_atoms.dart';
+import 'package:logisticsmobile/features/warehouses/presentation/widgets/warehouse_premium_theme.dart';
 import 'package:logisticsmobile/features/warehouses/presentation/widgets/warehouses_enterprise_widgets.dart';
 import 'package:logisticsmobile/routes/route_names.dart';
 import 'package:logisticsmobile/widgets/wms/wms_state_views.dart';
 
-/// Enterprise Warehouses — mobile-first infrastructure screen aligned with web.
+/// Premium Warehouses — mobile-first infrastructure & capacity control screen.
 class WarehousesScreen extends StatefulWidget {
   const WarehousesScreen({super.key});
 
@@ -49,107 +51,40 @@ class _WarehousesScreenState extends State<WarehousesScreen>
   }
 
   Future<void> _showWarehouseDialog({Warehouse? existing}) async {
-    final colors = WmsUiColors.of(context);
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final locCtrl = TextEditingController(text: existing?.location ?? '');
-    final capCtrl = TextEditingController(
-      text: existing != null ? '${existing.capacity}' : '',
-    );
-
-    final saved = await showDialog<bool>(
+    final result = await showWarehouseFormDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        title: Text(
-          existing == null ? 'New Warehouse' : 'Edit Warehouse',
-          style: TextStyle(color: colors.textPrimary),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                style: TextStyle(color: colors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: locCtrl,
-                style: TextStyle(color: colors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Location'),
-              ),
-              TextField(
-                controller: capCtrl,
-                style: TextStyle(color: colors.textPrimary),
-                decoration:
-                    const InputDecoration(labelText: 'Capacity (units)'),
-                keyboardType: TextInputType.number,
-              ),
-              if (existing != null && existing.assignedStaff.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Assigned Staff',
-                  style: WmsDesignTokens.supportingDense(context).copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    for (final s in existing.assignedStaff)
-                      Chip(
-                        label: Text(s.displayName),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      existing: existing,
     );
+    if (result == null || !mounted) return;
 
-    if (saved != true || !mounted) return;
-    final capacity = num.tryParse(capCtrl.text.trim()) ?? 0;
     try {
       if (existing == null) {
         await _cubit!.create(
-          name: nameCtrl.text.trim(),
-          location: locCtrl.text.trim(),
-          capacity: capacity,
+          name: result.name,
+          location: result.location,
+          capacity: result.capacity,
         );
       } else {
         await _cubit!.update(
           id: existing.id,
-          name: nameCtrl.text.trim(),
-          location: locCtrl.text.trim(),
-          capacity: capacity,
+          name: result.name,
+          location: result.location,
+          capacity: result.capacity,
         );
       }
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not save warehouse'),
-            backgroundColor: colors.error,
+      if (!mounted) return;
+      final palette = WarehousePalette.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: palette.colors.error,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-        );
-      }
+          content: const Text('Could not save warehouse'),
+        ),
+      );
     }
   }
 
@@ -160,13 +95,15 @@ class _WarehousesScreenState extends State<WarehousesScreen>
       return const Scaffold(body: StaffScopeLoadingBody());
     }
 
+    final palette = WarehousePalette.of(context);
+    final colors = palette.colors;
     final canManage = _canManage(context);
-    final colors = WmsUiColors.of(context);
 
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: colors.background,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: colors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -174,43 +111,66 @@ class _WarehousesScreenState extends State<WarehousesScreen>
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warehouse_outlined, color: colors.primary, size: 18),
-            const SizedBox(width: 6),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                gradient: palette.brandGradient,
+                borderRadius: BorderRadius.circular(9),
+                boxShadow: palette.glow(
+                  palette.brand,
+                  opacity: 0.34,
+                  blur: 12,
+                  dy: 4,
+                  spread: -3,
+                ),
+              ),
+              child: const Icon(
+                Icons.warehouse_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm + 2),
             Text(
               'Warehouses',
-              style: TextStyle(
+              style: WmsDesignTokens.cardTitle(context).copyWith(
                 color: colors.textPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 18,
+                fontSize: 17,
+                letterSpacing: -0.3,
               ),
             ),
           ],
         ),
       ),
-      body: BlocProvider.value(
-        value: cubit,
-        child: BlocBuilder<WarehousesCubit, ResourceState<WarehousesListState>>(
-          builder: (context, state) {
-            return _WarehousesEnterpriseBody(
-              cubit: cubit,
-              state: state,
-              canManage: canManage,
-              nameController: _nameController,
-              locationController: _locationController,
-              onAdd: () => _showWarehouseDialog(),
-              onEdit: (w) => _showWarehouseDialog(existing: w),
-              onAssignStaff: (w) => _showWarehouseDialog(existing: w),
-              onTransfer: () => context.push(RoutePaths.adminStockOperations),
-            );
-          },
+      body: DecoratedBox(
+        decoration: BoxDecoration(gradient: palette.pageGradient),
+        child: BlocProvider.value(
+          value: cubit,
+          child: BlocBuilder<WarehousesCubit, ResourceState<WarehousesListState>>(
+            builder: (context, state) {
+              return _WarehousesBody(
+                cubit: cubit,
+                state: state,
+                canManage: canManage,
+                nameController: _nameController,
+                locationController: _locationController,
+                onAdd: () => _showWarehouseDialog(),
+                onEdit: (w) => _showWarehouseDialog(existing: w),
+                onAssignStaff: (w) => _showWarehouseDialog(existing: w),
+                onTransfer: () => context.push(RoutePaths.adminStockOperations),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
 
-class _WarehousesEnterpriseBody extends StatelessWidget {
-  const _WarehousesEnterpriseBody({
+class _WarehousesBody extends StatelessWidget {
+  const _WarehousesBody({
     required this.cubit,
     required this.state,
     required this.canManage,
@@ -234,30 +194,12 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = WmsUiColors.of(context);
+    final palette = WarehousePalette.of(context);
+    final colors = palette.colors;
 
     if ((state.isLoading || state.status == ResourceStatus.initial) &&
         state.data == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: colors.primary),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Loading warehouses…',
-              style: TextStyle(color: colors.textSecondary, fontSize: 15),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (state.isFailure && state.data == null) {
-      return WmsErrorState(
-        message: state.message ?? 'Failed to load warehouses',
-        onRetry: cubit.load,
-      );
+      return _WarehousesLoadingView(palette: palette);
     }
 
     final data = state.data;
@@ -272,7 +214,7 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
     final all = data.warehouses;
 
     return RefreshIndicator(
-      color: colors.primary,
+      color: palette.brand,
       backgroundColor: colors.surface,
       onRefresh: cubit.refresh,
       child: ListView(
@@ -281,16 +223,13 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
           AppSpacing.screenPadding,
           AppSpacing.sm,
           AppSpacing.screenPadding,
-          AppSpacing.xxxl,
+          AppSpacing.xxxl + AppSpacing.lg,
         ),
         children: [
-          WarehousesEnterpriseHeader(
-            canManage: canManage,
-            onAdd: onAdd,
-          ),
-          const SizedBox(height: AppSpacing.sectionGap),
+          WarehousesEnterpriseHeader(canManage: canManage, onAdd: onAdd),
+          const SizedBox(height: AppSpacing.xl + 2),
           WarehousesKpiStrip(summary: data.summary),
-          const SizedBox(height: AppSpacing.sectionGap),
+          const SizedBox(height: AppSpacing.xl),
           WarehousesSearchPanel(
             nameController: nameController,
             locationController: locationController,
@@ -310,18 +249,28 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
               onSelected: cubit.setCapacityFilter,
             ),
           ],
-          const SizedBox(height: AppSpacing.sectionGap),
+          const SizedBox(height: AppSpacing.xl),
           if (all.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
               child: WmsEmptyState(
                 title: 'No warehouses',
-                message:
-                    'Create a warehouse to begin managing infrastructure.',
+                message: 'Create a warehouse to begin managing infrastructure.',
                 icon: Icons.warehouse_outlined,
               ),
             )
           else ...[
+            WarehouseSectionHeading(
+              eyebrow: 'Network',
+              title: 'Facilities',
+              subtitle: '${items.length} of ${all.length} shown',
+              trailing: WarehouseGlowBadge(
+                icon: Icons.warehouse_rounded,
+                color: palette.accentBlue,
+                size: 38,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             if (items.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -334,7 +283,7 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
             else
               ...items.map(
                 (w) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md + 2),
                   child: WarehouseEnterpriseCard(
                     warehouse: w,
                     canManage: canManage,
@@ -345,11 +294,57 @@ class _WarehousesEnterpriseBody extends StatelessWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: AppSpacing.sectionGap),
+            const SizedBox(height: AppSpacing.sm),
             WarehousesAnalyticsSection(warehouses: all),
-            const SizedBox(height: AppSpacing.sectionGap),
+            const SizedBox(height: AppSpacing.xl + 2),
             WarehousesPerformanceSection(rankings: data.rankings),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Branded loading state — keeps the premium chrome while data resolves.
+class _WarehousesLoadingView extends StatelessWidget {
+  const _WarehousesLoadingView({required this.palette});
+
+  final WarehousePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 58,
+            height: 58,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: palette.brand,
+                  backgroundColor: palette.insetFill,
+                ),
+                WarehouseGlowBadge(
+                  icon: Icons.warehouse_rounded,
+                  color: palette.brand,
+                  size: 38,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Loading warehouses…',
+            style: WmsDesignTokens.body(context).copyWith(
+              color: palette.colors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

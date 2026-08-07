@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_bloc.dart';
@@ -29,6 +29,7 @@ class RoleDashboardScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user = authState.user;
@@ -104,7 +105,7 @@ class RoleDashboardScaffold extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.cloud_done_outlined,
-                              color: AppColors.success,
+                              color: colors.success,
                               size: AppSpacing.iconMd,
                             ),
                             const SizedBox(width: AppSpacing.md),

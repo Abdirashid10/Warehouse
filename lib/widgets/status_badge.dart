@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 
 enum StatusType { success, warning, error, info, neutral, pending }
 
@@ -14,21 +14,27 @@ class StatusBadge extends StatelessWidget {
   final String label;
   final StatusType type;
 
+  /// Resolves the badge's fill and ink from the active theme.
+  ///
+  /// The `*Light` tints in the static palette are light-mode fills (`#DCFCE7`
+  /// and friends); painting them in dark mode produced a near-white chip that
+  /// then carried mid-tone text. Reading the tint from [WmsUiColors] gives a
+  /// dark-mode-appropriate fill for the same semantic role.
   (Color background, Color foreground) _colors(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colors = WmsUiColors.of(context);
     switch (type) {
       case StatusType.success:
-        return (AppColors.successLight, AppColors.success);
+        return (colors.successMuted, colors.success);
       case StatusType.warning:
-        return (AppColors.warningLight, AppColors.warning);
+        return (colors.warningMuted, colors.warning);
       case StatusType.error:
-        return (AppColors.errorLight, AppColors.error);
+        return (colors.errorMuted, colors.error);
       case StatusType.info:
-        return (AppColors.infoLight, AppColors.info);
+        return (colors.infoMuted, colors.info);
       case StatusType.pending:
-        return (AppColors.accentLight, AppColors.accent);
+        return (colors.accentMuted, colors.accent);
       case StatusType.neutral:
-        return (AppColors.surfaceVariant, scheme.onSurfaceVariant);
+        return (colors.mutedSurface, colors.textSecondary);
     }
   }
 

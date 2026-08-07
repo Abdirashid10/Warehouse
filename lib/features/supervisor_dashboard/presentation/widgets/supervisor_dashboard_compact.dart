@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
@@ -23,6 +23,7 @@ class SupervisorAlertsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Alerts',
       count: alerts.hasAlerts
@@ -56,7 +57,7 @@ class SupervisorAlertsPanel extends StatelessWidget {
                           count: alerts.lowStockCount > 0
                               ? alerts.lowStockCount
                               : alerts.lowStock.length,
-                          color: AppColors.warning,
+                          color: colors.warning,
                           icon: Icons.trending_down_rounded,
                         ),
                       if (alerts.expiring.isNotEmpty || alerts.expiringCount > 0)
@@ -65,7 +66,7 @@ class SupervisorAlertsPanel extends StatelessWidget {
                           count: alerts.expiringCount > 0
                               ? alerts.expiringCount
                               : alerts.expiring.length,
-                          color: AppColors.warning,
+                          color: colors.warning,
                           icon: Icons.schedule_rounded,
                         ),
                       if (alerts.critical.isNotEmpty || alerts.criticalCount > 0)
@@ -74,15 +75,15 @@ class SupervisorAlertsPanel extends StatelessWidget {
                           count: alerts.criticalCount > 0
                               ? alerts.criticalCount
                               : alerts.critical.length,
-                          color: AppColors.error,
+                          color: colors.error,
                           icon: Icons.error_outline_rounded,
                         ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  ..._visibleItems(alerts.lowStock, AppColors.warning),
-                  ..._visibleItems(alerts.expiring, AppColors.warning),
-                  ..._visibleItems(alerts.critical, AppColors.error),
+                  ..._visibleItems(alerts.lowStock, colors.warning, colors),
+                  ..._visibleItems(alerts.expiring, colors.warning, colors),
+                  ..._visibleItems(alerts.critical, colors.error, colors),
                 ],
               ),
             ),
@@ -92,6 +93,7 @@ class SupervisorAlertsPanel extends StatelessWidget {
   List<Widget> _visibleItems(
     List<SupervisorInventoryAlertItem> items,
     Color accent,
+    WmsUiColors colors,
   ) {
     if (items.isEmpty) return const [];
     return [
@@ -99,7 +101,7 @@ class SupervisorAlertsPanel extends StatelessWidget {
         if (i > 0)
           Divider(
             height: AppSpacing.lg,
-            color: AppColors.border.withValues(alpha: 0.6),
+            color: colors.border.withValues(alpha: 0.6),
           ),
         _CompactAlertRow(item: items[i], accent: accent),
       ],
@@ -173,6 +175,7 @@ class _CompactAlertRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -215,7 +218,7 @@ class _CompactAlertRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
+                color: colors.surfaceElevated,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
               child: Text(
@@ -278,14 +281,15 @@ class _CompactWarehouseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final isHighLoad = warehouse.status.toLowerCase().contains('high');
-    final statusColor = isHighLoad ? AppColors.warning : AppColors.success;
+    final statusColor = isHighLoad ? colors.warning : colors.success;
     final utilization = warehouse.utilizationPercent ?? 0;
     final capacityColor = utilization >= 85
-        ? AppColors.warning
+        ? colors.warning
         : utilization >= 60
-            ? AppColors.info
-            : AppColors.primary;
+            ? colors.info
+            : colors.primary;
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -298,13 +302,13 @@ class _CompactWarehouseCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
+                  color: colors.primaryMuted,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.warehouse_outlined,
                   size: WmsIconSizes.status,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -379,7 +383,7 @@ class _CompactWarehouseCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (utilization / 100).clamp(0.0, 1.0),
               minHeight: 4,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: colors.surfaceElevated,
               color: capacityColor,
             ),
           ),
@@ -402,11 +406,12 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: colors.surfaceElevated,
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
         child: Row(

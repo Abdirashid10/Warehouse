@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/widgets/wms/wms_pushed_scaffold.dart';
 
@@ -9,13 +9,14 @@ class InventoryTrackingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final background = isDark ? const Color(0xFF0F172A) : AppColors.background;
-    final surface = isDark ? const Color(0xFF111827) : AppColors.surface;
-    final border = isDark ? Colors.white24 : AppColors.border;
-    final primaryText = isDark ? Colors.white : AppColors.textPrimary;
-    final secondaryText = isDark ? Colors.white70 : AppColors.textSecondary;
+    final background = isDark ? const Color(0xFF0F172A) : colors.background;
+    final surface = isDark ? const Color(0xFF111827) : colors.surface;
+    final border = isDark ? Colors.white24 : colors.border;
+    final primaryText = isDark ? Colors.white : colors.textPrimary;
+    final secondaryText = isDark ? Colors.white70 : colors.textSecondary;
 
     final warehouses = [
       _WarehouseSnapshot(
@@ -25,7 +26,7 @@ class InventoryTrackingScreen extends StatelessWidget {
         lowStock: 3,
         outOfStock: 1,
         status: 'Safe',
-        accent: AppColors.success,
+        accent: colors.success,
       ),
       _WarehouseSnapshot(
         name: 'East Dock',
@@ -34,7 +35,7 @@ class InventoryTrackingScreen extends StatelessWidget {
         lowStock: 5,
         outOfStock: 0,
         status: 'Low Stock',
-        accent: AppColors.warning,
+        accent: colors.warning,
       ),
       _WarehouseSnapshot(
         name: 'West Yard',
@@ -43,7 +44,7 @@ class InventoryTrackingScreen extends StatelessWidget {
         lowStock: 2,
         outOfStock: 2,
         status: 'Out of Stock',
-        accent: AppColors.error,
+        accent: colors.error,
       ),
     ];
 
@@ -78,6 +79,7 @@ class InventoryTrackingScreen extends StatelessWidget {
             ...warehouses.map((warehouse) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _buildWarehouseCard(
+                    context,
                     warehouse,
                     surface: surface,
                     border: border,
@@ -98,6 +100,7 @@ class InventoryTrackingScreen extends StatelessWidget {
     required Color primaryText,
     required Color secondaryText,
   }) {
+    final colors = WmsUiColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -127,10 +130,10 @@ class InventoryTrackingScreen extends StatelessWidget {
             spacing: AppSpacing.md,
             runSpacing: AppSpacing.md,
             children: [
-              _StatChip(label: 'Safe', value: '41', color: AppColors.success),
-              _StatChip(label: 'Low', value: '10', color: AppColors.warning),
-              _StatChip(label: 'Out', value: '3', color: AppColors.error),
-              _StatChip(label: 'Expired', value: '2', color: AppColors.expired),
+              _StatChip(label: 'Safe', value: '41', color: colors.success),
+              _StatChip(label: 'Low', value: '10', color: colors.warning),
+              _StatChip(label: 'Out', value: '3', color: colors.error),
+              _StatChip(label: 'Expired', value: '2', color: colors.expired),
             ],
           ),
         ],
@@ -139,12 +142,14 @@ class InventoryTrackingScreen extends StatelessWidget {
   }
 
   Widget _buildWarehouseCard(
+    BuildContext context,
     _WarehouseSnapshot warehouse, {
     required Color surface,
     required Color border,
     required Color primaryText,
     required Color secondaryText,
   }) {
+    final colors = WmsUiColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -192,11 +197,11 @@ class InventoryTrackingScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              _MetricTile(label: 'Items', value: '${warehouse.items}', color: AppColors.primary),
+              _MetricTile(label: 'Items', value: '${warehouse.items}', color: colors.primary),
               const SizedBox(width: AppSpacing.sm),
-              _MetricTile(label: 'Low', value: '${warehouse.lowStock}', color: AppColors.warning),
+              _MetricTile(label: 'Low', value: '${warehouse.lowStock}', color: colors.warning),
               const SizedBox(width: AppSpacing.sm),
-              _MetricTile(label: 'Out', value: '${warehouse.outOfStock}', color: AppColors.error),
+              _MetricTile(label: 'Out', value: '${warehouse.outOfStock}', color: colors.error),
             ],
           ),
         ],

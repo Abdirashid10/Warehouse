@@ -3,14 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/di/staff_repositories.dart';
 import 'package:logisticsmobile/core/di/staff_scope_init_mixin.dart';
 import 'package:logisticsmobile/core/presentation/resource_state.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
-import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
+import 'package:logisticsmobile/core/utils/mobile_ui.dart';
 import 'package:logisticsmobile/features/admin/presentation/cubit/administration_cubit.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_account_panel.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_activity_panel.dart';
+import 'package:logisticsmobile/features/admin/presentation/widgets/admin_alerts_panel.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_audit_panel.dart';
-import 'package:logisticsmobile/features/admin/presentation/widgets/admin_notifications_panel.dart';
+import 'package:logisticsmobile/features/admin/presentation/widgets/admin_premium_atoms.dart';
+import 'package:logisticsmobile/features/admin/presentation/widgets/admin_premium_theme.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_roles_panel.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_users_panel.dart';
 import 'package:logisticsmobile/features/admin/presentation/widgets/admin_warehouses_panel.dart';
@@ -20,11 +21,15 @@ import 'package:logisticsmobile/features/notifications/presentation/cubit/notifi
 import 'package:logisticsmobile/features/profile/domain/usecases/get_profile_usecase.dart';
 import 'package:logisticsmobile/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:logisticsmobile/features/users/presentation/cubit/users_cubit.dart';
-import 'package:logisticsmobile/widgets/wms/wms_kpi_strip.dart';
+import 'package:logisticsmobile/widgets/wms/wms_pill_tab_bar.dart';
 import 'package:logisticsmobile/widgets/wms/wms_pushed_scaffold.dart';
 import 'package:logisticsmobile/widgets/wms/wms_skeleton.dart';
 import 'package:logisticsmobile/widgets/wms/wms_state_views.dart';
 
+/// Administration Center — the platform's control panel.
+///
+/// Composition: an indigo hero banner carrying the bento metric grid, a pinned
+/// pill navigation bar, and seven console surfaces beneath it.
 class AdministrationScreen extends StatefulWidget {
   const AdministrationScreen({super.key});
 
@@ -33,12 +38,26 @@ class AdministrationScreen extends StatefulWidget {
 }
 
 class _AdministrationScreenState extends State<AdministrationScreen>
-    with StaffScopeInitMixin {
+    with StaffScopeInitMixin, TickerProviderStateMixin {
+  static const _tabs = [
+    WmsPillTabSpec(label: 'Users', icon: Icons.groups_rounded),
+    WmsPillTabSpec(label: 'Roles', icon: Icons.admin_panel_settings_rounded),
+    WmsPillTabSpec(label: 'Warehouses', icon: Icons.warehouse_rounded),
+    WmsPillTabSpec(label: 'Audit', icon: Icons.shield_rounded),
+    WmsPillTabSpec(label: 'Activity', icon: Icons.timeline_rounded),
+    WmsPillTabSpec(label: 'Alerts', icon: Icons.notifications_active_rounded),
+    WmsPillTabSpec(label: 'Account', icon: Icons.badge_rounded),
+  ];
+
   AdministrationCubit? _adminCubit;
   UsersCubit? _usersCubit;
   AuditCubit? _auditCubit;
   NotificationsCubit? _notificationsCubit;
   ProfileCubit? _profileCubit;
+
+  late final TabController _tabController =
+      TabController(length: _tabs.length, vsync: this);
+
   final _userSearchController = TextEditingController();
   final _auditSearchController = TextEditingController();
 
@@ -55,6 +74,7 @@ class _AdministrationScreenState extends State<AdministrationScreen>
 
   @override
   void dispose() {
+    _tabController.dispose();
     _userSearchController.dispose();
     _auditSearchController.dispose();
     _adminCubit?.close();
@@ -78,7 +98,6 @@ class _AdministrationScreenState extends State<AdministrationScreen>
   @override
   Widget build(BuildContext context) {
     final adminCubit = _adminCubit;
-    final colors = WmsUiColors.of(context);
     if (adminCubit == null) {
       return const WmsPushedScaffold(
         title: 'Administration',
@@ -86,179 +105,225 @@ class _AdministrationScreenState extends State<AdministrationScreen>
       );
     }
 
+    final palette = AdminPalette.of(context);
+
     return WmsPushedScaffold(
       title: 'Administration',
-      body: MultiBlocProvider(
-        providers: [
-          BlocProvider.value(value: adminCubit),
-          BlocProvider.value(value: _usersCubit!),
-          BlocProvider.value(value: _auditCubit!),
-          BlocProvider.value(value: _notificationsCubit!),
-          BlocProvider.value(value: _profileCubit!),
-        ],
-        child: BlocBuilder<AdministrationCubit, ResourceState<AdministrationBundle>>(
-          builder: (context, state) {
-            if (state.isLoading && state.data == null) {
-              return const _AdminLoadingView();
-            }
-            if (state.isFailure && state.data == null) {
-              return WmsErrorState(
-                message: state.message ?? 'Failed to load administration',
-                onRetry: adminCubit.load,
-              );
-            }
-            final bundle = state.data;
-            if (bundle == null) return const SizedBox.shrink();
+      body: DecoratedBox(
+        decoration: BoxDecoration(gradient: palette.pageGradient),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: adminCubit),
+            BlocProvider.value(value: _usersCubit!),
+            BlocProvider.value(value: _auditCubit!),
+            BlocProvider.value(value: _notificationsCubit!),
+            BlocProvider.value(value: _profileCubit!),
+          ],
+          child: BlocBuilder<AdministrationCubit,
+              ResourceState<AdministrationBundle>>(
+            builder: (context, state) {
+              if (state.isLoading && state.data == null) {
+                return const _AdminLoadingView();
+              }
 
-            return DefaultTabController(
-              length: 7,
-              child: RefreshIndicator(
+              final bundle = state.data;
+              if (bundle == null) {
+                return WmsErrorState(
+                  message: state.message ?? 'Failed to load administration',
+                  onRetry: adminCubit.load,
+                );
+              }
+
+              return RefreshIndicator(
+                color: palette.brand,
+                backgroundColor: palette.colors.surface,
                 onRefresh: _refreshAll,
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                    SliverToBoxAdapter(child: _AdminHeader(bundle: bundle)),
+                    SliverToBoxAdapter(
+                      child: AdminHeroBanner(
+                        title: 'Administration Center',
+                        subtitle:
+                            'Identity, access, infrastructure and compliance',
+                        trailing: AdminStatusChip(
+                          label: 'Console',
+                          color: Colors.white,
+                          icon: Icons.lock_rounded,
+                        ),
+                        child: AdminBentoGrid(bundle: bundle),
+                      ),
+                    ),
                     SliverPersistentHeader(
                       pinned: true,
-                      delegate: _AdminTabDelegate(
-                        child: Container(
-                          color: colors.background,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.screenPadding,
-                            vertical: AppSpacing.sm,
+                      delegate: _PillTabBarDelegate(
+                        background: palette.colors.background,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.screenPadding,
+                            AppSpacing.md,
+                            AppSpacing.screenPadding,
+                            AppSpacing.sm,
                           ),
-                          child: const TabBar(
-                            isScrollable: true,
-                            tabAlignment: TabAlignment.start,
-                            tabs: [
-                              Tab(text: 'Users'),
-                              Tab(text: 'Roles'),
-                              Tab(text: 'Warehouses'),
-                              Tab(text: 'Audit'),
-                              Tab(text: 'Activity'),
-                              Tab(text: 'Alerts'),
-                              Tab(text: 'Account'),
-                            ],
+                          child: AdminPillTabBar(
+                            controller: _tabController,
+                            tabs: _tabs,
                           ),
                         ),
                       ),
                     ),
                     SliverFillRemaining(
                       hasScrollBody: true,
-                      child: TabBarView(
-                        children: [
-                          AdminUsersPanel(
-                            cubit: _usersCubit!,
-                            searchController: _userSearchController,
-                            padding: false,
-                            recentAudit: bundle.auditActivities,
-                          ),
-                          AdminRolesPanel(bundle: bundle),
-                          AdminWarehousesPanel(bundle: bundle),
-                          AdminAuditPanel(
-                            cubit: _auditCubit!,
-                            searchController: _auditSearchController,
-                            padding: false,
-                          ),
-                          AdminActivityPanel(activities: bundle.auditActivities),
-                          AdminNotificationsPanel(
-                            cubit: _notificationsCubit!,
-                            padding: false,
-                            sectioned: true,
-                          ),
-                          AdminAccountPanel(profileCubit: _profileCubit!),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.screenPadding,
+                        ),
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            AdminUsersPanel(
+                              cubit: _usersCubit!,
+                              searchController: _userSearchController,
+                              padding: false,
+                              recentAudit: bundle.auditActivities,
+                            ),
+                            AdminRolesPanel(bundle: bundle),
+                            AdminWarehousesPanel(bundle: bundle),
+                            AdminAuditPanel(
+                              cubit: _auditCubit!,
+                              searchController: _auditSearchController,
+                              padding: false,
+                            ),
+                            AdminActivityPanel(
+                              activities: bundle.auditActivities,
+                            ),
+                            AdminAlertsPanel(cubit: _notificationsCubit!),
+                            AdminAccountPanel(profileCubit: _profileCubit!),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
 
-class _AdminHeader extends StatelessWidget {
-  const _AdminHeader({required this.bundle});
+// ─────────────────────────────────────────────────────────────────────────────
+// Bento metric grid
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// System metrics for the console header.
+///
+/// Every tile is a live count from the loaded bundle. Where a metric has a
+/// natural denominator the tile shows that ratio as a micro-bar; the console
+/// holds no history, so no tile claims a period-over-period delta.
+class AdminBentoGrid extends StatelessWidget {
+  const AdminBentoGrid({super.key, required this.bundle});
 
   final AdministrationBundle bundle;
 
   @override
   Widget build(BuildContext context) {
-    final activeUsers = bundle.users.where((u) => u.isActive).length;
+    final palette = AdminPalette.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = width >= MobileUi.tabletWidth ? 4 : 2;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenPadding,
-        AppSpacing.lg,
-        AppSpacing.screenPadding,
-        AppSpacing.lg,
+    final activeUsers = bundle.users.where((u) => u.isActive).length;
+    final totalUsers = bundle.users.where((u) => !u.archived).length;
+    final admins = bundle.userCountForRole('Admin');
+    final totalAlerts = bundle.notifications.length;
+
+    final tiles = <Widget>[
+      AdminBentoCard(
+        label: 'Total Users',
+        value: '$totalUsers',
+        icon: Icons.groups_rounded,
+        accent: palette.brand,
+        caption: '$admins with admin access',
       ),
-      decoration: const BoxDecoration(
-        gradient: AppColors.brandGradient,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(AppSpacing.radiusXl),
-          bottomRight: Radius.circular(AppSpacing.radiusXl),
-        ),
+      AdminBentoCard(
+        label: 'Active Sessions',
+        value: '$activeUsers',
+        icon: Icons.verified_user_rounded,
+        accent: palette.emerald,
+        share: totalUsers == 0 ? null : activeUsers / totalUsers,
+        caption: totalUsers == 0
+            ? 'No accounts loaded'
+            : '${((activeUsers / totalUsers) * 100).round()}% of directory',
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Administration Center',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Users, roles, warehouses, compliance, and account controls',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          WmsKpiStrip(
-            items: [
-              WmsKpiItem(
-                label: 'Users',
-                value: '${bundle.users.where((u) => !u.archived).length}',
-                icon: Icons.people_outline,
-                color: AppColors.primary,
-                background: Colors.white,
-              ),
-              WmsKpiItem(
-                label: 'Active',
-                value: '$activeUsers',
-                icon: Icons.verified_user_outlined,
-                color: AppColors.success,
-                background: Colors.white,
-              ),
-              WmsKpiItem(
-                label: 'Warehouses',
-                value: '${bundle.warehouses.length}',
-                icon: Icons.warehouse_outlined,
-                color: AppColors.accent,
-                background: Colors.white,
-              ),
-              WmsKpiItem(
-                label: 'Unread',
-                value: '${bundle.unreadCount}',
-                icon: Icons.notifications_outlined,
-                color: AppColors.warning,
-                background: Colors.white,
-              ),
-            ],
-          ),
-        ],
+      AdminBentoCard(
+        label: 'Warehouses',
+        value: '${bundle.warehouses.length}',
+        icon: Icons.warehouse_rounded,
+        accent: palette.cobalt,
+        caption: 'Managed facilities',
       ),
+      AdminBentoCard(
+        label: 'Unread Alerts',
+        value: '${bundle.unreadCount}',
+        icon: Icons.notifications_active_rounded,
+        accent: bundle.unreadCount > 0 ? palette.coral : palette.slate,
+        share: totalAlerts == 0 ? null : bundle.unreadCount / totalAlerts,
+        caption: totalAlerts == 0
+            ? 'No alerts loaded'
+            : 'of $totalAlerts total alerts',
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      primary: false,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: AppSpacing.sm + 2,
+        crossAxisSpacing: AppSpacing.sm + 2,
+        mainAxisExtent: AdminPalette.bentoExtent,
+      ),
+      itemCount: tiles.length,
+      itemBuilder: (context, index) => tiles[index],
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chrome
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PillTabBarDelegate extends SliverPersistentHeaderDelegate {
+  const _PillTabBarDelegate({required this.child, required this.background});
+
+  final Widget child;
+  final Color background;
+
+  static const double _extent =
+      AdminPillTabBar.height + AppSpacing.md + AppSpacing.sm;
+
+  @override
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: background, child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _PillTabBarDelegate oldDelegate) =>
+      oldDelegate.child != child || oldDelegate.background != background;
 }
 
 class _AdminLoadingView extends StatelessWidget {
@@ -269,34 +334,30 @@ class _AdminLoadingView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenPadding),
       children: const [
-        WmsSkeletonBox(height: 140, radius: AppSpacing.radiusXl),
-        SizedBox(height: AppSpacing.md),
-        WmsKpiSkeleton(),
-        SizedBox(height: AppSpacing.md),
-        WmsSkeletonBox(height: 48, radius: AppSpacing.radiusMd),
+        WmsSkeletonBox(height: 150, radius: AdminPalette.radiusHero),
+        SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            Expanded(
+              child: WmsSkeletonBox(
+                height: AdminPalette.bentoExtent,
+                radius: AdminPalette.radiusCard,
+              ),
+            ),
+            SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: WmsSkeletonBox(
+                height: AdminPalette.bentoExtent,
+                radius: AdminPalette.radiusCard,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: AppSpacing.lg),
+        WmsSkeletonBox(height: 46, radius: AdminPalette.radiusPill),
+        SizedBox(height: AppSpacing.lg),
+        WmsSkeletonBox(height: 220, radius: AdminPalette.radiusCard),
       ],
     );
-  }
-}
-
-class _AdminTabDelegate extends SliverPersistentHeaderDelegate {
-  _AdminTabDelegate({required this.child});
-
-  final Widget child;
-
-  @override
-  double get minExtent => 62;
-
-  @override
-  double get maxExtent => 62;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(covariant _AdminTabDelegate oldDelegate) {
-    return oldDelegate.child != child;
   }
 }

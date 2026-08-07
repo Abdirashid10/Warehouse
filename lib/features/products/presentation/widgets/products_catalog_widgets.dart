@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
@@ -63,14 +63,15 @@ class _CategoryPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Material(
-      color: selected ? ProductsCategoryChipBar._selectedBg : AppColors.surface,
+      color: selected ? ProductsCategoryChipBar._selectedBg : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: selected
               ? ProductsCategoryChipBar._selectedBorder
-              : AppColors.border,
+              : colors.border,
         ),
       ),
       child: InkWell(

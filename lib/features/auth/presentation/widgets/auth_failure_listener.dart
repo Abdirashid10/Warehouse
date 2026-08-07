@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/auth/auth_debug_config.dart';
 import 'package:logisticsmobile/core/auth/auth_debug_log.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_event.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_state.dart';
@@ -39,13 +39,14 @@ class _AuthFailureListenerState extends State<AuthFailureListener> {
   }
 
   void _showSnackBar(BuildContext context, String message) {
+    final colors = WmsUiColors.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger
       ?..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppColors.error,
+          backgroundColor: colors.error,
           duration: const Duration(seconds: 8),
         ),
       );

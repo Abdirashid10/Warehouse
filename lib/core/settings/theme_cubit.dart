@@ -27,11 +27,14 @@ class ThemeState {
 }
 
 class ThemeCubit extends Cubit<ThemeState> {
+  /// Starts on [ThemeMode.system] so the very first frame already matches the
+  /// OS. Booting into light and correcting after [load] would flash a white
+  /// screen at a user whose device is in dark mode.
   ThemeCubit(this._preferences)
       : super(
           const ThemeState(
-            themeMode: ThemeMode.light,
-            preference: AppThemePreference.light,
+            themeMode: ThemeMode.system,
+            preference: AppThemePreference.system,
           ),
         );
 

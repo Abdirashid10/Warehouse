@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/routes/route_names.dart';
@@ -134,6 +134,7 @@ class _ModuleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -144,10 +145,10 @@ class _ModuleTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
+              color: colors.primaryMuted,
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            child: Icon(module.icon, color: AppColors.primary, size: WmsIconSizes.dashboardCard),
+            child: Icon(module.icon, color: colors.primary, size: WmsIconSizes.dashboardCard),
           ),
           const Spacer(),
           Text(

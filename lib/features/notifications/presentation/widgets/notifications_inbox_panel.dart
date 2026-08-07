@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/presentation/resource_state.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
@@ -194,13 +193,13 @@ class NotificationsInboxCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
+              color: colors.primaryMuted,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.notifications_outlined,
               size: WmsIconSizes.listLeading,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -230,8 +229,8 @@ class NotificationsInboxCard extends StatelessWidget {
                         width: 8,
                         height: 8,
                         margin: const EdgeInsets.only(top: 4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.success,
+                        decoration: BoxDecoration(
+                          color: colors.success,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -288,13 +287,13 @@ class NotificationsInboxCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.12),
+                          color: colors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           'UNREAD',
                           style: WmsDesignTokens.supportingDense(context).copyWith(
-                            color: AppColors.success,
+                            color: colors.success,
                             fontWeight: FontWeight.w800,
                             fontSize: 11,
                           ),
@@ -314,7 +313,7 @@ class NotificationsInboxCard extends StatelessWidget {
                           Text(
                             'View',
                             style: WmsDesignTokens.supportingDense(context).copyWith(
-                              color: AppColors.success,
+                              color: colors.success,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -322,7 +321,7 @@ class NotificationsInboxCard extends StatelessWidget {
                           Icon(
                             Icons.open_in_new_rounded,
                             size: WmsIconSizes.status,
-                            color: AppColors.success,
+                            color: colors.success,
                           ),
                         ],
                       ),
@@ -345,16 +344,17 @@ class _CategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.infoLight,
+        color: colors.infoMuted,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
         style: WmsDesignTokens.supportingDense(context).copyWith(
-          color: AppColors.info,
+          color: colors.info,
           fontWeight: FontWeight.w800,
           fontSize: 10,
           letterSpacing: 0.4,

@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:logisticsmobile/core/constants/wms/order_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/features/dashboard/domain/entities/control_center_data.dart';
 import 'package:logisticsmobile/features/dashboard/domain/entities/staff_dashboard_data.dart';
 import 'package:logisticsmobile/features/dashboard/presentation/widgets/dashboard_enterprise_widgets.dart';
@@ -68,8 +66,7 @@ abstract final class ControlCenterMapper {
 
   static DashboardChartTimeSeries movementTrendFrom(
     List<StockMovement> movements,
-  ) =>
-      _movementTrend(movements);
+  ) => _movementTrend(movements);
 
   static DashboardChartTimeSeries orderTrendFrom(List<WarehouseOrder> orders) =>
       _orderTrend(orders);
@@ -108,7 +105,9 @@ abstract final class ControlCenterMapper {
       if (order.any((s) => s.toLowerCase() == entry.key.toLowerCase())) {
         continue;
       }
-      result.add(ControlCenterOrderStatus(label: entry.key, count: entry.value));
+      result.add(
+        ControlCenterOrderStatus(label: entry.key, count: entry.value),
+      );
     }
     return result;
   }
@@ -122,18 +121,12 @@ abstract final class ControlCenterMapper {
 
     final m = supervisor.orderMonitoring;
     return [
-      const ControlCenterOrderStatus(
-        label: WmsOrderStatuses.pending,
-        count: 0,
-      ),
+      const ControlCenterOrderStatus(label: WmsOrderStatuses.pending, count: 0),
       ControlCenterOrderStatus(
         label: WmsOrderStatuses.processing,
         count: m.processing,
       ),
-      ControlCenterOrderStatus(
-        label: WmsOrderStatuses.packed,
-        count: m.packed,
-      ),
+      ControlCenterOrderStatus(label: WmsOrderStatuses.packed, count: m.packed),
       ControlCenterOrderStatus(
         label: WmsOrderStatuses.shipped,
         count: m.shipped,
@@ -145,7 +138,9 @@ abstract final class ControlCenterMapper {
     ];
   }
 
-  static DashboardChartTimeSeries _movementTrend(List<StockMovement> movements) {
+  static DashboardChartTimeSeries _movementTrend(
+    List<StockMovement> movements,
+  ) {
     final labels = StaffDashboardMetrics.last7DayLabels();
     final inbound = List<double>.filled(7, 0);
     final outbound = List<double>.filled(7, 0);
@@ -174,12 +169,12 @@ abstract final class ControlCenterMapper {
       lines: [
         DashboardChartLine(
           label: 'Inbound',
-          color: AppColors.success,
+          role: DashboardSeriesRole.inbound,
           values: inbound,
         ),
         DashboardChartLine(
           label: 'Outbound',
-          color: const Color(0xFFC2410C),
+          role: DashboardSeriesRole.outbound,
           values: outbound,
         ),
       ],
@@ -206,7 +201,7 @@ abstract final class ControlCenterMapper {
       lines: [
         DashboardChartLine(
           label: 'Orders',
-          color: AppColors.primary,
+          role: DashboardSeriesRole.orders,
           values: created,
         ),
       ],

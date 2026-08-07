@@ -283,8 +283,14 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                             : null,
                       ),
                     ),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.xxxl),
+                  // Tail clears the system gesture bar as well as giving the
+                  // last card breathing room; a fixed 32dp alone leaves the
+                  // final row tight against the bar on gesture-nav devices.
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: AppSpacing.xxxl +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
                   ),
                 ],
               ),

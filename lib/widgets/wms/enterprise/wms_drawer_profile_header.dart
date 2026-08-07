@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/constants/app_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/features/auth/presentation/bloc/auth_bloc.dart';
@@ -12,7 +12,7 @@ class WmsDrawerProfileHeader extends StatelessWidget {
   const WmsDrawerProfileHeader({
     super.key,
     this.subtitle = 'Warehouse Control Center',
-    this.accentColor = AppColors.primary,
+    this.accentColor,
     this.roleOverride,
     this.warehouseOverride,
   });
@@ -24,7 +24,8 @@ class WmsDrawerProfileHeader extends StatelessWidget {
   static const _avatarNameGap = 12.0;
 
   final String subtitle;
-  final Color accentColor;
+  /// Optional override; falls back to the theme primary at paint time.
+  final Color? accentColor;
   final String? roleOverride;
   final String? warehouseOverride;
 
@@ -37,6 +38,7 @@ class WmsDrawerProfileHeader extends StatelessWidget {
         final warehouse =
             warehouseOverride ?? user?.warehouse ?? 'Main Distribution Center';
         final initials = user?.initials ?? '?';
+        final accent = accentColor ?? WmsUiColors.of(context).primary;
 
         return Container(
           padding: const EdgeInsets.fromLTRB(
@@ -50,8 +52,8 @@ class WmsDrawerProfileHeader extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                accentColor,
-                accentColor.withValues(alpha: 0.82),
+                accent,
+                accent.withValues(alpha: 0.82),
               ],
             ),
           ),

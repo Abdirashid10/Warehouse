@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -58,6 +58,12 @@ class CommandCenterSections {
   });
 
   final BuildContext context;
+
+  /// Theme-resolved palette for this section tree.
+  ///
+  /// Exposed as a getter so every section method reads the live theme rather
+  /// than a colour captured when the holder was constructed.
+  WmsUiColors get colors => WmsUiColors.of(context);
   final ControlCenterData data;
   final CommandCenterRoutes routes;
 
@@ -151,7 +157,7 @@ class CommandCenterSections {
                 value: WmsFormatters.quantity(kpis.totalUnitsOnHand),
                 subtitle: 'Total quantity',
                 icon: Icons.inventory_2_outlined,
-                color: AppColors.primary,
+                color: colors.primary,
                 onTap: () => context.go(routes.inventoryRoute),
               ),
               CommandCenterKpiTileData(
@@ -159,7 +165,7 @@ class CommandCenterSections {
                 value: '${kpis.inStockLines}',
                 subtitle: 'Above threshold',
                 icon: Icons.check_circle_outline,
-                color: AppColors.success,
+                color: colors.success,
                 onTap: () => context.go(routes.inventoryRoute),
               ),
               CommandCenterKpiTileData(
@@ -167,7 +173,7 @@ class CommandCenterSections {
                 value: '${kpis.lowStockProducts}',
                 subtitle: 'Needs attention',
                 icon: Icons.warning_amber_rounded,
-                color: AppColors.warning,
+                color: colors.warning,
                 badge: kpis.lowStockProducts > 0 ? 'Needs attention' : null,
                 onTap: () => context.go(routes.inventoryRoute),
               ),
@@ -176,7 +182,7 @@ class CommandCenterSections {
                 value: '${kpis.outOfStockLines}',
                 subtitle: 'Zero quantity',
                 icon: Icons.remove_shopping_cart_outlined,
-                color: AppColors.error,
+                color: colors.error,
                 badge: kpis.outOfStockLines > 0 ? 'Critical' : null,
                 onTap: () => context.go(routes.inventoryRoute),
               ),
@@ -204,28 +210,28 @@ class CommandCenterSections {
                 value: '${data.warehouses.length}',
                 subtitle: 'Holding stock',
                 icon: Icons.warehouse_outlined,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               CommandCenterKpiTileData(
                 label: "Today's Movements",
                 value: '${kpis.stockMovementsToday}',
                 subtitle: 'Since midnight',
                 icon: Icons.show_chart_rounded,
-                color: AppColors.info,
+                color: colors.info,
               ),
               CommandCenterKpiTileData(
                 label: 'Total Orders',
                 value: '${kpis.totalOrders}',
                 subtitle: 'Pipeline',
                 icon: Icons.shopping_cart_outlined,
-                color: AppColors.accent,
+                color: colors.accent,
               ),
               CommandCenterKpiTileData(
                 label: 'Delivered',
                 value: '${data.supervisor.orderMonitoring.delivered}',
                 subtitle: 'Completed',
                 icon: Icons.local_shipping_outlined,
-                color: AppColors.success,
+                color: colors.success,
               ),
             ],
           ),
@@ -587,13 +593,14 @@ class CommandCenterOperationalAlertsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final items = [
-      _AlertItem('Out Of Stock', outOfStock, AppColors.error, Icons.remove_shopping_cart_outlined),
-      _AlertItem('Low Stock Items', lowStock, AppColors.warning, Icons.trending_down_rounded),
+      _AlertItem('Out Of Stock', outOfStock, colors.error, Icons.remove_shopping_cart_outlined),
+      _AlertItem('Low Stock Items', lowStock, colors.warning, Icons.trending_down_rounded),
       _AlertItem('Expired Products', expired, const Color(0xFF7C3AED), Icons.shield_outlined),
-      _AlertItem('Expiring Soon', expiringSoon, AppColors.info, Icons.schedule_rounded),
-      _AlertItem('Pending Orders', pendingOrders, AppColors.primary, Icons.shopping_cart_outlined),
-      _AlertItem('Urgent Tasks', urgentTasks, AppColors.error, Icons.access_time_filled),
+      _AlertItem('Expiring Soon', expiringSoon, colors.info, Icons.schedule_rounded),
+      _AlertItem('Pending Orders', pendingOrders, colors.primary, Icons.shopping_cart_outlined),
+      _AlertItem('Urgent Tasks', urgentTasks, colors.error, Icons.access_time_filled),
     ];
 
     return LayoutBuilder(
@@ -683,12 +690,13 @@ class CommandCenterExpiryStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Column(
       children: [
-        _ExpiryStatRow(label: 'Expired', count: expired, color: AppColors.error),
-        _ExpiryStatRow(label: 'Expiring Soon', count: expiringSoon, color: AppColors.warning),
-        _ExpiryStatRow(label: 'Expiring (30D)', count: expiringSoon, color: AppColors.info),
-        _ExpiryStatRow(label: 'Safe', count: safe, color: AppColors.success),
+        _ExpiryStatRow(label: 'Expired', count: expired, color: colors.error),
+        _ExpiryStatRow(label: 'Expiring Soon', count: expiringSoon, color: colors.warning),
+        _ExpiryStatRow(label: 'Expiring (30D)', count: expiringSoon, color: colors.info),
+        _ExpiryStatRow(label: 'Safe', count: safe, color: colors.success),
       ],
     );
   }
@@ -701,6 +709,7 @@ class CommandCenterExpiredItemsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final expiredItems = alerts.critical;
     if (expiredItems.isEmpty) {
       return const WmsEmptyState(
@@ -717,7 +726,7 @@ class CommandCenterExpiredItemsList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Row(
               children: [
-                const Icon(Icons.event_busy_outlined, size: WmsIconSizes.status, color: AppColors.error),
+                Icon(Icons.event_busy_outlined, size: WmsIconSizes.status, color: colors.error),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
@@ -741,18 +750,19 @@ class CommandCenterOrdersByStatusChart extends StatelessWidget {
 
   final List<ControlCenterOrderStatus> statusCounts;
 
-  Color _colorFor(String label) {
+  Color _colorFor(String label, WmsUiColors colors) {
     final lower = label.toLowerCase();
     if (lower.contains('pending')) return AppThemeColors.lightTextSecondary;
-    if (lower.contains('process')) return AppColors.info;
+    if (lower.contains('process')) return colors.info;
     if (lower.contains('pack')) return const Color(0xFF7C3AED);
-    if (lower.contains('ship')) return AppColors.accent;
-    if (lower.contains('deliver')) return AppColors.success;
-    return AppColors.primary;
+    if (lower.contains('ship')) return colors.accent;
+    if (lower.contains('deliver')) return colors.success;
+    return colors.primary;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final display = statusCounts.where((s) => s.count > 0).toList();
     if (display.isEmpty) {
       return const Center(
@@ -803,7 +813,7 @@ class CommandCenterOrdersByStatusChart extends StatelessWidget {
                   toY: statusCounts[i].count.toDouble(),
                   width: 14,
                   borderRadius: BorderRadius.circular(4),
-                  color: _colorFor(statusCounts[i].label),
+                  color: _colorFor(statusCounts[i].label, colors),
                 ),
               ],
             ),
@@ -838,12 +848,13 @@ class CommandCenterWarehousePerfRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final util = warehouse.utilizationPercent ?? 0;
     final color = util >= 85
-        ? AppColors.error
+        ? colors.error
         : util >= 60
-            ? AppColors.warning
-            : AppColors.success;
+            ? colors.warning
+            : colors.success;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,6 +902,7 @@ class CommandCenterTaskOverviewGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final stats = [
       _TaskStat(label: 'Total', value: tasks.total),
       _TaskStat(label: 'Awaiting', value: tasks.pending),
@@ -898,7 +910,7 @@ class CommandCenterTaskOverviewGrid extends StatelessWidget {
       _TaskStat(label: 'In Progress', value: tasks.inProgress),
       _TaskStat(label: 'Completed', value: tasks.completed),
       _TaskStat(label: 'Rejected', value: 0),
-      _TaskStat(label: 'Overdue', value: overdue, color: AppColors.error),
+      _TaskStat(label: 'Overdue', value: overdue, color: colors.error),
     ];
 
     return LayoutBuilder(
@@ -925,17 +937,18 @@ class CommandCenterInsightRow extends StatelessWidget {
 
   final DashboardInsight insight;
 
-  Color _colorFor(String severity) {
+  Color _colorFor(String severity, WmsUiColors colors) {
     return switch (severity.toLowerCase()) {
-      'critical' || 'error' => AppColors.error,
-      'warning' => AppColors.warning,
-      _ => AppColors.info,
+      'critical' || 'error' => colors.error,
+      'warning' => colors.warning,
+      _ => colors.info,
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(insight.severity);
+    final colors = WmsUiColors.of(context);
+    final color = _colorFor(insight.severity, colors);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1038,6 +1051,7 @@ class CommandCenterRecentOrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (orders.isEmpty) {
       return const WmsEmptyState(
         title: 'No recent orders',
@@ -1059,7 +1073,7 @@ class CommandCenterRecentOrdersList extends StatelessWidget {
                 child: Text(
                   orders[i].orderNumber,
                   style: WmsDesignTokens.body(context).copyWith(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1318,7 +1332,8 @@ class _TaskStatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = stat.color ?? AppColors.primary;
+    final colors = WmsUiColors.of(context);
+    final color = stat.color ?? colors.primary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1394,6 +1409,7 @@ class _NotificationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1410,13 +1426,13 @@ class _NotificationRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.infoLight,
+                  color: colors.infoMuted,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   'UNREAD',
                   style: WmsDesignTokens.supportingDense(context).copyWith(
-                    color: AppColors.info,
+                    color: colors.info,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
                   ),

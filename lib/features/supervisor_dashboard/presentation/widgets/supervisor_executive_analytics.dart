@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
@@ -378,6 +378,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Executive Insights',
       child: SizedBox(
@@ -393,7 +394,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
                   label: 'Total Units',
                   value: WmsFormatters.quantity(analytics.totalUnits),
                   icon: Icons.inventory_2_outlined,
-                  color: AppColors.primary,
+                  color: colors.primary,
                   trend: analytics.totalUnitsTrend,
                 );
               case 1:
@@ -401,7 +402,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
                   label: 'Active Warehouses',
                   value: '${analytics.activeWarehouses}',
                   icon: Icons.warehouse_outlined,
-                  color: AppColors.info,
+                  color: colors.info,
                   trend: analytics.activeWarehousesTrend,
                 );
               case 2:
@@ -409,7 +410,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
                   label: 'Low Stock Items',
                   value: '${analytics.lowStockItems}',
                   icon: Icons.trending_down_rounded,
-                  color: AppColors.warning,
+                  color: colors.warning,
                   trend: analytics.lowStockTrend,
                 );
               case 3:
@@ -417,7 +418,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
                   label: 'Critical Alerts',
                   value: '${analytics.criticalAlerts}',
                   icon: Icons.error_outline_rounded,
-                  color: AppColors.error,
+                  color: colors.error,
                   trend: analytics.criticalAlertsTrend,
                 );
               default:
@@ -425,7 +426,7 @@ class SupervisorExecutiveInsightsSection extends StatelessWidget {
                   label: 'Open Tasks',
                   value: '${analytics.openTasks}',
                   icon: Icons.assignment_outlined,
-                  color: AppColors.accent,
+                  color: colors.accent,
                   trend: analytics.openTasksTrend,
                 );
             }
@@ -508,9 +509,10 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final (icon, color) = switch (trend.direction) {
-      ExecutiveTrendDirection.up => (Icons.arrow_upward_rounded, AppColors.success),
-      ExecutiveTrendDirection.down => (Icons.arrow_downward_rounded, AppColors.error),
+      ExecutiveTrendDirection.up => (Icons.arrow_upward_rounded, colors.success),
+      ExecutiveTrendDirection.down => (Icons.arrow_downward_rounded, colors.error),
       ExecutiveTrendDirection.stable => (Icons.remove_rounded, Theme.of(context).colorScheme.onSurfaceVariant),
     };
 
@@ -542,6 +544,7 @@ class SupervisorWarehousePerformanceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Warehouse Performance',
       count: analytics.warehouses.isEmpty ? null : analytics.warehouses.length,
@@ -557,7 +560,7 @@ class SupervisorWarehousePerformanceSection extends StatelessWidget {
                     label: 'Capacity Used',
                     value: '${analytics.avgCapacityUsed}%',
                     icon: Icons.pie_chart_outline_rounded,
-                    color: AppColors.info,
+                    color: colors.info,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -566,7 +569,7 @@ class SupervisorWarehousePerformanceSection extends StatelessWidget {
                     label: 'Units Stored',
                     value: WmsFormatters.quantity(analytics.totalUnitsStored),
                     icon: Icons.inventory_2_outlined,
-                    color: AppColors.primary,
+                    color: colors.primary,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -575,7 +578,7 @@ class SupervisorWarehousePerformanceSection extends StatelessWidget {
                     label: 'Active Staff',
                     value: '${analytics.totalActiveStaff}',
                     icon: Icons.people_outline,
-                    color: AppColors.accent,
+                    color: colors.accent,
                   ),
                 ),
               ],
@@ -663,12 +666,13 @@ class _WarehouseUtilizationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final utilization = warehouse.utilizationPercent ?? 0;
     final color = utilization >= 85
-        ? AppColors.warning
+        ? colors.warning
         : utilization >= 60
-            ? AppColors.info
-            : AppColors.primary;
+            ? colors.info
+            : colors.primary;
 
     return Row(
       children: [
@@ -690,7 +694,7 @@ class _WarehouseUtilizationRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (utilization / 100).clamp(0.0, 1.0),
               minHeight: 4,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: colors.surfaceElevated,
               color: color,
             ),
           ),
@@ -720,6 +724,7 @@ class SupervisorInventoryAnalyticsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = math.max(
       1,
       analytics.inStock +
@@ -737,7 +742,7 @@ class SupervisorInventoryAnalyticsSection extends StatelessWidget {
             _InventoryStatusRow(
               label: 'In Stock',
               count: analytics.inStock,
-              color: AppColors.success,
+              color: colors.success,
               icon: Icons.check_circle_outline,
               fraction: analytics.inStock / total,
             ),
@@ -745,7 +750,7 @@ class SupervisorInventoryAnalyticsSection extends StatelessWidget {
             _InventoryStatusRow(
               label: 'Low Stock',
               count: analytics.lowStock,
-              color: AppColors.warning,
+              color: colors.warning,
               icon: Icons.warning_amber_rounded,
               fraction: analytics.lowStock / total,
             ),
@@ -753,7 +758,7 @@ class SupervisorInventoryAnalyticsSection extends StatelessWidget {
             _InventoryStatusRow(
               label: 'Out of Stock',
               count: analytics.outOfStock,
-              color: AppColors.error,
+              color: colors.error,
               icon: Icons.remove_shopping_cart_outlined,
               fraction: analytics.outOfStock / total,
             ),
@@ -761,7 +766,7 @@ class SupervisorInventoryAnalyticsSection extends StatelessWidget {
             _InventoryStatusRow(
               label: 'Expired',
               count: analytics.expired,
-              color: AppColors.error,
+              color: colors.error,
               icon: Icons.event_busy_outlined,
               fraction: analytics.expired / total,
             ),
@@ -789,6 +794,7 @@ class _InventoryStatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Row(
       children: [
         Container(
@@ -828,7 +834,7 @@ class _InventoryStatusRow extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: fraction.clamp(0.05, 1.0),
                   minHeight: 4,
-                  backgroundColor: AppColors.surfaceVariant,
+                  backgroundColor: colors.surfaceElevated,
                   color: color,
                 ),
               ),
@@ -848,6 +854,7 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Task Analytics',
       child: AppCard(
@@ -861,7 +868,7 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
                   child: _TaskStatusChip(
                     label: 'Pending',
                     count: analytics.pendingTasks,
-                    color: AppColors.warning,
+                    color: colors.warning,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -869,7 +876,7 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
                   child: _TaskStatusChip(
                     label: 'In Progress',
                     count: analytics.inProgressTasks,
-                    color: AppColors.info,
+                    color: colors.info,
                   ),
                 ),
               ],
@@ -881,7 +888,7 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
                   child: _TaskStatusChip(
                     label: 'Waiting',
                     count: analytics.waitingConfirmationTasks,
-                    color: AppColors.accent,
+                    color: colors.accent,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -889,7 +896,7 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
                   child: _TaskStatusChip(
                     label: 'Completed',
                     count: analytics.completedTasks,
-                    color: AppColors.success,
+                    color: colors.success,
                   ),
                 ),
               ],
@@ -906,8 +913,8 @@ class SupervisorTaskAnalyticsSection extends StatelessWidget {
                       CircularProgressIndicator(
                         value: analytics.completionRate / 100,
                         strokeWidth: 5,
-                        backgroundColor: AppColors.surfaceVariant,
-                        color: AppColors.primary,
+                        backgroundColor: colors.surfaceElevated,
+                        color: colors.primary,
                       ),
                       Center(
                         child: Text(
@@ -1004,6 +1011,7 @@ class SupervisorActivitySummarySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Activity Summary',
       subtitle: "Today's operational totals",
@@ -1016,7 +1024,7 @@ class SupervisorActivitySummarySection extends StatelessWidget {
                 label: 'Transfers',
                 value: '${analytics.todayTransfers}',
                 icon: Icons.swap_horiz_rounded,
-                color: AppColors.info,
+                color: colors.info,
               ),
             ),
             Expanded(
@@ -1024,7 +1032,7 @@ class SupervisorActivitySummarySection extends StatelessWidget {
                 label: 'Inbound',
                 value: '${analytics.todayInbound}',
                 icon: Icons.download_rounded,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
             ),
             Expanded(
@@ -1032,7 +1040,7 @@ class SupervisorActivitySummarySection extends StatelessWidget {
                 label: 'Outbound',
                 value: '${analytics.todayOutbound}',
                 icon: Icons.upload_rounded,
-                color: AppColors.accent,
+                color: colors.accent,
               ),
             ),
             Expanded(
@@ -1040,7 +1048,7 @@ class SupervisorActivitySummarySection extends StatelessWidget {
                 label: 'Orders',
                 value: '${analytics.todayOrders}',
                 icon: Icons.shopping_cart_outlined,
-                color: AppColors.warning,
+                color: colors.warning,
               ),
             ),
           ],
@@ -1103,6 +1111,7 @@ class SupervisorExecutiveAlertsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = analytics.executiveCriticalAlerts +
         analytics.executiveExpiredProducts +
         analytics.executiveLowStockProducts;
@@ -1112,7 +1121,7 @@ class SupervisorExecutiveAlertsCard extends StatelessWidget {
       count: total > 0 ? total : null,
       child: AppCard(
         elevated: true,
-        accentColor: total > 0 ? AppColors.error : AppColors.success,
+        accentColor: total > 0 ? colors.error : colors.success,
         child: Row(
           children: [
             Expanded(
@@ -1120,33 +1129,33 @@ class SupervisorExecutiveAlertsCard extends StatelessWidget {
                 label: 'Critical Alerts',
                 count: analytics.executiveCriticalAlerts,
                 icon: Icons.priority_high_rounded,
-                color: AppColors.error,
+                color: colors.error,
               ),
             ),
             Container(
               width: 1,
               height: 48,
-              color: AppColors.border.withValues(alpha: 0.6),
+              color: colors.border.withValues(alpha: 0.6),
             ),
             Expanded(
               child: _AlertSummaryTile(
                 label: 'Expired Products',
                 count: analytics.executiveExpiredProducts,
                 icon: Icons.event_busy_outlined,
-                color: AppColors.warning,
+                color: colors.warning,
               ),
             ),
             Container(
               width: 1,
               height: 48,
-              color: AppColors.border.withValues(alpha: 0.6),
+              color: colors.border.withValues(alpha: 0.6),
             ),
             Expanded(
               child: _AlertSummaryTile(
                 label: 'Low Stock',
                 count: analytics.executiveLowStockProducts,
                 icon: Icons.trending_down_rounded,
-                color: AppColors.info,
+                color: colors.info,
               ),
             ),
           ],

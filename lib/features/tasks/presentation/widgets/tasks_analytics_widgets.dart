@@ -125,11 +125,14 @@ class TaskStatusDistributionChart extends StatelessWidget {
                   if (i < 0 || i >= series.length) {
                     return const SizedBox.shrink();
                   }
+                  // Single line: two-line axis labels wrapped raggedly and
+                  // pushed the plot area up.
                   return Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       series[i].$1,
-                      maxLines: 2,
+                      maxLines: 1,
+                      softWrap: false,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: chart.axisLabelStyle,
@@ -141,17 +144,28 @@ class TaskStatusDistributionChart extends StatelessWidget {
           ),
           barGroups: [
             for (var i = 0; i < series.length; i++)
-              BarChartGroupData(
-                x: i,
-                barRods: [
-                  BarChartRodData(
-                    toY: series[i].$2.toDouble(),
-                    width: series.length > 5 ? 12 : 16,
-                    borderRadius: BorderRadius.circular(4),
-                    color: WmsTaskStatusBadge.foregroundFor(series[i].$3),
-                  ),
-                ],
-              ),
+              () {
+                final tone = WmsTaskStatusBadge.foregroundFor(series[i].$3);
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: series[i].$2.toDouble(),
+                      width: series.length > 5 ? 14 : 18,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(6),
+                      ),
+                      // Softened with a vertical fade rather than a flat
+                      // saturated block.
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [tone, tone.withValues(alpha: 0.55)],
+                      ),
+                    ),
+                  ],
+                );
+              }(),
           ],
         ),
         duration: const Duration(milliseconds: 400),
@@ -401,7 +415,7 @@ class TasksActivitySection extends StatelessWidget {
               : Column(
                   children: [
                     for (var i = 0; i < activity.length; i++) ...[
-                      if (i > 0) const Divider(height: AppSpacing.lg),
+                      if (i > 0) const Divider(height: AppSpacing.lg, thickness: 0.8),
                       _ActivityRow(item: activity[i]),
                     ],
                   ],
@@ -431,48 +445,71 @@ class _ActivityRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: WmsIconSizes.kpi, color: colors.primary),
-        const SizedBox(width: AppSpacing.sm),
+        // Tinted disc keeps the icon column a fixed width, so every row's
+        // text starts on the same vertical line.
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Icon(icon, size: 16, color: colors.primary),
+        ),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 item.label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
                 style: WmsDesignTokens.body(context).copyWith(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                  fontSize: 13.5,
+                  height: 1.25,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                item.taskTitle,
+                item.actorName != null
+                    ? '${item.taskTitle} · ${item.actorName}'
+                    : item.taskTitle,
                 maxLines: 1,
+                softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: WmsDesignTokens.supporting(context).copyWith(
+                style: WmsDesignTokens.supportingDense(context).copyWith(
                   color: colors.textSecondary,
-                  fontSize: 13,
+                  fontSize: 12,
+                  height: 1.25,
                 ),
               ),
-              if (item.actorName != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  item.actorName!,
-                  style: WmsDesignTokens.supportingDense(context).copyWith(
-                        color: colors.textTertiary,
-                        fontSize: 12,
-                  ),
-                ),
-              ],
             ],
           ),
         ),
-        Text(
-          _formatTime(item.timestamp),
-          style: WmsDesignTokens.supportingDense(context).copyWith(
-                        color: colors.textTertiary,
-                        fontSize: 12,
+        const SizedBox(width: AppSpacing.sm),
+        // Fixed-width, right-aligned column so timestamps line up down the
+        // list instead of floating at ragged offsets.
+        SizedBox(
+          width: 56,
+          child: Text(
+            _formatTime(item.timestamp),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: WmsDesignTokens.supportingDense(context).copyWith(
+              color: colors.textTertiary,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],

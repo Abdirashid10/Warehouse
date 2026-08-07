@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -96,8 +95,8 @@ class StaffDashboardHeader extends StatelessWidget {
                 WmsQuickAction(
                   label: 'Receive',
                   icon: Icons.move_to_inbox_outlined,
-                  iconColor: AppColors.success,
-                  iconBackground: AppColors.successLight,
+                  iconColor: colors.success,
+                  iconBackground: colors.successMuted,
                   onTap: () => onNavigate(stockOpsRoute),
                 ),
                 WmsQuickAction(
@@ -110,29 +109,29 @@ class StaffDashboardHeader extends StatelessWidget {
                 WmsQuickAction(
                   label: 'Transfer',
                   icon: Icons.swap_horiz_rounded,
-                  iconColor: AppColors.info,
-                  iconBackground: AppColors.infoLight,
+                  iconColor: colors.info,
+                  iconBackground: colors.infoMuted,
                   onTap: () => onNavigate(stockOpsRoute),
                 ),
                 WmsQuickAction(
                   label: 'Tasks',
                   icon: Icons.assignment_outlined,
-                  iconColor: AppColors.primary,
-                  iconBackground: AppColors.primaryLight,
+                  iconColor: colors.primary,
+                  iconBackground: colors.primaryMuted,
                   onTap: () => onNavigate(tasksRoute),
                 ),
                 WmsQuickAction(
                   label: 'Orders',
                   icon: Icons.shopping_cart_outlined,
-                  iconColor: AppColors.accent,
-                  iconBackground: AppColors.accentLight,
+                  iconColor: colors.accent,
+                  iconBackground: colors.accentMuted,
                   onTap: () => onNavigate(ordersRoute, replace: true),
                 ),
                 WmsQuickAction(
                   label: 'Reports',
                   icon: Icons.assessment_outlined,
-                  iconColor: AppColors.primary,
-                  iconBackground: AppColors.primaryLight,
+                  iconColor: colors.primary,
+                  iconBackground: colors.primaryMuted,
                   onTap: () => onNavigate(reportsRoute),
                 ),
               ],

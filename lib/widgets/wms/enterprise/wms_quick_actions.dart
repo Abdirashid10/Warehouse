@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_theme_extension.dart';
@@ -127,8 +127,9 @@ class _QuickActionCardState extends State<_QuickActionCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
-    final iconBg = widget.action.iconBackground ?? AppColors.primaryLight;
+    final iconBg = widget.action.iconBackground ?? colors.primaryMuted;
     final iconColor = widget.action.iconColor ?? primary;
     final labelSize = widget.compact ? 11.0 : 12.0;
 

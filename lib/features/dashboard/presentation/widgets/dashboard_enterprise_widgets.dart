@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logisticsmobile/core/constants/wms/task_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
@@ -33,16 +33,12 @@ abstract final class DashboardUi {
     required int expired,
     required int expiringSoon,
     required int criticalItems,
-  }) =>
-      outOfStock + expired + expiringSoon + criticalItems;
+  }) => outOfStock + expired + expiringSoon + criticalItems;
 }
 
 /// Multi-series time-series payload for dashboard charts.
 class DashboardChartTimeSeries {
-  const DashboardChartTimeSeries({
-    required this.labels,
-    required this.lines,
-  });
+  const DashboardChartTimeSeries({required this.labels, required this.lines});
 
   final List<String> labels;
   final List<DashboardChartLine> lines;
@@ -52,16 +48,49 @@ class DashboardChartTimeSeries {
       lines.any((line) => line.values.any((value) => value > 0));
 }
 
+/// What a chart series represents.
+///
+/// Series carry a role instead of a literal colour because they are built in
+/// the data layer, where no theme exists — a colour chosen at parse time is
+/// frozen to whichever brightness happened to be active, and cannot follow a
+/// mode switch.
+enum DashboardSeriesRole {
+  inbound,
+  outbound,
+  transfer,
+  orders,
+  lowStock,
+  utilization,
+  neutral,
+}
+
 class DashboardChartLine {
   const DashboardChartLine({
     required this.label,
-    required this.color,
     required this.values,
+    this.role = DashboardSeriesRole.neutral,
+    this.color,
   });
 
   final String label;
-  final Color color;
   final List<double> values;
+  final DashboardSeriesRole role;
+
+  /// Explicit override. Prefer [role]; this exists for callers that already
+  /// resolved a colour from the theme themselves.
+  final Color? color;
+
+  Color resolveColor(WmsUiColors colors) =>
+      color ??
+      switch (role) {
+        DashboardSeriesRole.inbound => colors.success,
+        DashboardSeriesRole.outbound => colors.outbound,
+        DashboardSeriesRole.transfer => colors.info,
+        DashboardSeriesRole.orders => colors.primary,
+        DashboardSeriesRole.lowStock => colors.warning,
+        DashboardSeriesRole.utilization => colors.accent,
+        DashboardSeriesRole.neutral => colors.textSecondary,
+      };
 }
 
 class DashboardExecutiveSummary extends StatelessWidget {
@@ -88,6 +117,7 @@ class DashboardExecutiveSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Executive KPI Overview',
       child: LayoutBuilder(
@@ -103,8 +133,8 @@ class DashboardExecutiveSummary extends StatelessWidget {
                   label: 'Total Units',
                   value: totalInventory,
                   icon: Icons.inventory_2_outlined,
-                  color: AppColors.primary,
-                  background: AppColors.primaryLight,
+                  color: colors.primary,
+                  background: colors.primaryMuted,
                   onTap: onInventoryTap,
                 ),
               ),
@@ -114,8 +144,8 @@ class DashboardExecutiveSummary extends StatelessWidget {
                   label: 'Active Warehouses',
                   value: '$activeWarehouses',
                   icon: Icons.warehouse_outlined,
-                  color: AppColors.info,
-                  background: AppColors.infoLight,
+                  color: colors.info,
+                  background: colors.infoMuted,
                   onTap: onWarehousesTap,
                 ),
               ),
@@ -125,8 +155,8 @@ class DashboardExecutiveSummary extends StatelessWidget {
                   label: 'Low Stock',
                   value: '$lowStock',
                   icon: Icons.trending_down_rounded,
-                  color: AppColors.warning,
-                  background: AppColors.warningLight,
+                  color: colors.warning,
+                  background: colors.warningMuted,
                   onTap: onLowStockTap,
                 ),
               ),
@@ -136,8 +166,8 @@ class DashboardExecutiveSummary extends StatelessWidget {
                   label: 'Critical Alerts',
                   value: '$criticalAlerts',
                   icon: Icons.error_outline_rounded,
-                  color: AppColors.error,
-                  background: AppColors.errorLight,
+                  color: colors.error,
+                  background: colors.errorMuted,
                   onTap: onAlertsTap,
                 ),
               ),
@@ -222,7 +252,8 @@ class DashboardCriticalAlertsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorityItems = _buildPriorityItems();
+    final colors = WmsUiColors.of(context);
+    final priorityItems = _buildPriorityItems(colors);
     if (priorityItems.isEmpty) {
       return WmsDashboardSection(
         title: 'Critical Alerts',
@@ -262,111 +293,126 @@ class DashboardCriticalAlertsPanel extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildPriorityItems() {
+  List<Widget> _buildPriorityItems(WmsUiColors colors) {
     final items = <_AlertEntry>[];
 
     if (supervisorAlerts != null) {
       final sa = supervisorAlerts!;
       for (final item in sa.critical.take(2)) {
-        items.add(_AlertEntry(
-          priority: 0,
-          label: item.productName,
-          detail: '${item.sku} · ${item.warehouseName}',
-          count: item.quantity?.toInt(),
-          color: AppColors.error,
-          icon: Icons.error_outline_rounded,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 0,
+            label: item.productName,
+            detail: '${item.sku} · ${item.warehouseName}',
+            count: item.quantity?.toInt(),
+            color: colors.error,
+            icon: Icons.error_outline_rounded,
+          ),
+        );
       }
       for (final item in sa.expiring.take(1)) {
-        items.add(_AlertEntry(
-          priority: 1,
-          label: item.productName,
-          detail: 'Expiring · ${item.warehouseName}',
-          count: item.quantity?.toInt(),
-          color: AppColors.warning,
-          icon: Icons.schedule_rounded,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 1,
+            label: item.productName,
+            detail: 'Expiring · ${item.warehouseName}',
+            count: item.quantity?.toInt(),
+            color: colors.warning,
+            icon: Icons.schedule_rounded,
+          ),
+        );
       }
       if (sa.outOfStockCount > 0 && items.length < 3) {
-        items.add(_AlertEntry(
-          priority: 2,
-          label: 'Out of stock lines',
-          detail: 'Immediate replenishment required',
-          count: sa.outOfStockCount,
-          color: AppColors.error,
-          icon: Icons.remove_shopping_cart_outlined,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 2,
+            label: 'Out of stock lines',
+            detail: 'Immediate replenishment required',
+            count: sa.outOfStockCount,
+            color: colors.error,
+            icon: Icons.remove_shopping_cart_outlined,
+          ),
+        );
       }
       if (sa.lowStockCount > 0 && items.length < 3) {
-        items.add(_AlertEntry(
-          priority: 3,
-          label: 'Low stock items',
-          detail: 'Below minimum threshold',
-          count: sa.lowStockCount,
-          color: AppColors.warning,
-          icon: Icons.trending_down_rounded,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 3,
+            label: 'Low stock items',
+            detail: 'Below minimum threshold',
+            count: sa.lowStockCount,
+            color: colors.warning,
+            icon: Icons.trending_down_rounded,
+          ),
+        );
       }
     } else {
       if (alerts.outOfStockCount > 0) {
-        items.add(_AlertEntry(
-          priority: 0,
-          label: 'Out of stock',
-          detail: 'SKUs at zero quantity',
-          count: alerts.outOfStockCount,
-          color: AppColors.error,
-          icon: Icons.remove_shopping_cart_outlined,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 0,
+            label: 'Out of stock',
+            detail: 'SKUs at zero quantity',
+            count: alerts.outOfStockCount,
+            color: colors.error,
+            icon: Icons.remove_shopping_cart_outlined,
+          ),
+        );
       }
       if (alerts.expiredCount > 0) {
-        items.add(_AlertEntry(
-          priority: 1,
-          label: 'Expired inventory',
-          detail: 'Requires quarantine or disposal',
-          count: alerts.expiredCount,
-          color: AppColors.error,
-          icon: Icons.event_busy_outlined,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 1,
+            label: 'Expired inventory',
+            detail: 'Requires quarantine or disposal',
+            count: alerts.expiredCount,
+            color: colors.error,
+            icon: Icons.event_busy_outlined,
+          ),
+        );
       }
       if (alerts.expiringSoonCount > 0) {
-        items.add(_AlertEntry(
-          priority: 2,
-          label: 'Expiring soon',
-          detail: 'Action needed within shelf-life window',
-          count: alerts.expiringSoonCount,
-          color: AppColors.warning,
-          icon: Icons.schedule_rounded,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 2,
+            label: 'Expiring soon',
+            detail: 'Action needed within shelf-life window',
+            count: alerts.expiringSoonCount,
+            color: colors.warning,
+            icon: Icons.schedule_rounded,
+          ),
+        );
       }
       if (alerts.lowStockCount > 0) {
-        items.add(_AlertEntry(
-          priority: 3,
-          label: 'Low stock',
-          detail: 'Below reorder point',
-          count: alerts.lowStockCount,
-          color: AppColors.warning,
-          icon: Icons.trending_down_rounded,
-        ));
+        items.add(
+          _AlertEntry(
+            priority: 3,
+            label: 'Low stock',
+            detail: 'Below reorder point',
+            count: alerts.lowStockCount,
+            color: colors.warning,
+            icon: Icons.trending_down_rounded,
+          ),
+        );
       }
       for (final insight in insights) {
         final severity = insight.severity.toLowerCase();
         if (severity.contains('critical') || severity.contains('error')) {
-          items.add(_AlertEntry(
-            priority: severity.contains('critical') ? 0 : 2,
-            label: insight.message,
-            detail: 'System insight',
-            color: AppColors.error,
-            icon: Icons.report_problem_outlined,
-          ));
+          items.add(
+            _AlertEntry(
+              priority: severity.contains('critical') ? 0 : 2,
+              label: insight.message,
+              detail: 'System insight',
+              color: colors.error,
+              icon: Icons.report_problem_outlined,
+            ),
+          );
         }
       }
     }
 
     items.sort((a, b) => a.priority.compareTo(b.priority));
-    return items
-        .take(3)
-        .map((e) => _CriticalAlertRow(entry: e))
-        .toList();
+    return items.take(3).map((e) => _CriticalAlertRow(entry: e)).toList();
   }
 }
 
@@ -417,17 +463,17 @@ class _CriticalAlertRow extends StatelessWidget {
                 entry.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
                 entry.detail,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -442,9 +488,9 @@ class _CriticalAlertRow extends StatelessWidget {
             child: Text(
               '${entry.count}',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: entry.color,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: entry.color,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
       ],
@@ -470,18 +516,21 @@ class DashboardOperationsToday extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = todayMovements ?? inbound + outbound + transfers;
 
     return WmsDashboardSection(
       title: 'Operations Overview',
-      subtitle: total > 0 ? "$total movements today" : "Today's movement and order activity",
+      subtitle: total > 0
+          ? "$total movements today"
+          : "Today's movement and order activity",
       child: Row(
         children: [
           Expanded(
             child: _OpMetricTile(
               label: 'Inbound',
               count: inbound,
-              color: AppColors.success,
+              color: colors.success,
               icon: Icons.download_rounded,
             ),
           ),
@@ -499,7 +548,7 @@ class DashboardOperationsToday extends StatelessWidget {
             child: _OpMetricTile(
               label: 'Transfers',
               count: transfers,
-              color: AppColors.info,
+              color: colors.info,
               icon: Icons.swap_horiz_rounded,
             ),
           ),
@@ -508,7 +557,7 @@ class DashboardOperationsToday extends StatelessWidget {
             child: _OpMetricTile(
               label: 'Orders',
               count: orders,
-              color: AppColors.accent,
+              color: colors.accent,
               icon: Icons.shopping_bag_outlined,
             ),
           ),
@@ -548,7 +597,9 @@ class _OpMetricTile extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               '$count',
-              style: WmsDesignTokens.metricValue(context).copyWith(color: color),
+              style: WmsDesignTokens.metricValue(
+                context,
+              ).copyWith(color: color),
             ),
           ),
           const SizedBox(height: 2),
@@ -583,6 +634,7 @@ class DashboardInventoryHealth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = (inStock + lowStock + outOfStock).clamp(1, 999999);
     final wms = context.wms;
 
@@ -605,17 +657,17 @@ class DashboardInventoryHealth extends StatelessWidget {
                     if (inStock > 0)
                       Expanded(
                         flex: inStock,
-                        child: const ColoredBox(color: AppColors.success),
+                        child: ColoredBox(color: colors.success),
                       ),
                     if (lowStock > 0)
                       Expanded(
                         flex: lowStock,
-                        child: const ColoredBox(color: AppColors.warning),
+                        child: ColoredBox(color: colors.warning),
                       ),
                     if (outOfStock > 0)
                       Expanded(
                         flex: outOfStock,
-                        child: const ColoredBox(color: AppColors.error),
+                        child: ColoredBox(color: colors.error),
                       ),
                   ],
                 ),
@@ -626,28 +678,28 @@ class DashboardInventoryHealth extends StatelessWidget {
               label: 'In stock',
               count: inStock,
               percent: inStock / total,
-              color: AppColors.success,
+              color: colors.success,
             ),
             const SizedBox(height: AppSpacing.sm),
             _HealthRow(
               label: 'Low stock',
               count: lowStock,
               percent: lowStock / total,
-              color: AppColors.warning,
+              color: colors.warning,
             ),
             const SizedBox(height: AppSpacing.sm),
             _HealthRow(
               label: 'Out of stock',
               count: outOfStock,
               percent: outOfStock / total,
-              color: AppColors.error,
+              color: colors.error,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               totalUnitsLabel,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: wms.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: wms.textSecondary),
             ),
           ],
         ),
@@ -671,15 +723,16 @@ class _HealthRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Row(
       children: [
         SizedBox(
           width: 72,
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         Expanded(
@@ -688,7 +741,7 @@ class _HealthRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: percent.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: colors.surfaceElevated,
               color: color,
             ),
           ),
@@ -699,9 +752,9 @@ class _HealthRow extends StatelessWidget {
           child: Text(
             '$count',
             textAlign: TextAlign.right,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -731,6 +784,7 @@ class DashboardTaskCenter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final preview = activeTasks.where((t) => t.isActive).take(3).toList();
 
     return WmsDashboardSection(
@@ -743,7 +797,8 @@ class DashboardTaskCenter extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              final tileWidth = (constraints.maxWidth - DashboardUi.tileGap) / 2;
+              final tileWidth =
+                  (constraints.maxWidth - DashboardUi.tileGap) / 2;
               return Wrap(
                 spacing: DashboardUi.tileGap,
                 runSpacing: DashboardUi.tileGap,
@@ -753,7 +808,7 @@ class DashboardTaskCenter extends StatelessWidget {
                     child: _TaskMetricTile(
                       label: 'Pending',
                       count: pending,
-                      color: AppColors.warning,
+                      color: colors.warning,
                       icon: Icons.schedule_outlined,
                     ),
                   ),
@@ -762,7 +817,7 @@ class DashboardTaskCenter extends StatelessWidget {
                     child: _TaskMetricTile(
                       label: 'In Progress',
                       count: inProgress,
-                      color: AppColors.info,
+                      color: colors.info,
                       icon: Icons.play_circle_outline,
                     ),
                   ),
@@ -771,7 +826,7 @@ class DashboardTaskCenter extends StatelessWidget {
                     child: _TaskMetricTile(
                       label: 'Completed',
                       count: completed,
-                      color: AppColors.success,
+                      color: colors.success,
                       icon: Icons.check_circle_outline,
                     ),
                   ),
@@ -781,7 +836,7 @@ class DashboardTaskCenter extends StatelessWidget {
                       label: 'Completion Rate',
                       count: completionRate,
                       suffix: '%',
-                      color: AppColors.primary,
+                      color: colors.primary,
                       icon: Icons.donut_large_outlined,
                     ),
                   ),
@@ -844,18 +899,18 @@ class _TaskMetricTile extends StatelessWidget {
                 Text(
                   '$count$suffix',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
                 ),
                 Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -891,9 +946,9 @@ class DashboardTaskPreviewCard extends StatelessWidget {
                   task.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -901,8 +956,8 @@ class DashboardTaskPreviewCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1008,11 +1063,12 @@ class _WarehouseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final capacityColor = utilization >= 85
-        ? AppColors.error
+        ? colors.error
         : utilization >= 60
-            ? AppColors.warning
-            : AppColors.success;
+        ? colors.warning
+        : colors.success;
 
     return AppCard(
       elevated: true,
@@ -1022,10 +1078,10 @@ class _WarehouseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.warehouse_outlined,
                 size: WmsIconSizes.listLeading,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               const SizedBox(width: AppSpacing.xs),
               Expanded(
@@ -1033,9 +1089,9 @@ class _WarehouseCard extends StatelessWidget {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -1044,16 +1100,16 @@ class _WarehouseCard extends StatelessWidget {
           Text(
             '$units units${staffCount != null ? ' · $staffCount staff' : ''}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           if (status != null) ...[
             const SizedBox(height: 2),
             Text(
               status!,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
@@ -1067,9 +1123,9 @@ class _WarehouseCard extends StatelessWidget {
               Text(
                 '$utilization%',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: capacityColor,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: capacityColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -1079,7 +1135,7 @@ class _WarehouseCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (utilization / 100).clamp(0.0, 1.0),
               minHeight: 4,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: colors.surfaceElevated,
               color: capacityColor,
             ),
           ),
@@ -1098,7 +1154,7 @@ abstract final class StaffDashboardMetrics {
   }
 
   static ({int inbound, int outbound, int transfers, int orders})
-      operationsToday(StaffDashboardData data) {
+  operationsToday(StaffDashboardData data) {
     var inbound = 0, outbound = 0, transfers = 0, orders = 0;
 
     for (final m in data.movements) {
@@ -1137,15 +1193,16 @@ abstract final class StaffDashboardMetrics {
       }
     }
 
-    return (inbound: inbound, outbound: outbound, transfers: transfers, orders: orders);
+    return (
+      inbound: inbound,
+      outbound: outbound,
+      transfers: transfers,
+      orders: orders,
+    );
   }
 
-  static ({
-    int pending,
-    int inProgress,
-    int completed,
-    int completionRate,
-  }) taskCenter(List<WarehouseTask> tasks) {
+  static ({int pending, int inProgress, int completed, int completionRate})
+  taskCenter(List<WarehouseTask> tasks) {
     var pending = 0, inProgress = 0, completed = 0;
     for (final t in tasks) {
       if (t.status == WmsTaskStatuses.completed) {
@@ -1169,9 +1226,7 @@ abstract final class StaffDashboardMetrics {
   }
 
   static int criticalAlerts(DashboardAlerts alerts) =>
-      alerts.outOfStockCount +
-      alerts.expiredCount +
-      alerts.expiringSoonCount;
+      alerts.outOfStockCount + alerts.expiredCount + alerts.expiringSoonCount;
 
   static int weeklyMovements(StaffDashboardData data) {
     final start = DateTime.now().subtract(const Duration(days: 7));
@@ -1239,12 +1294,12 @@ abstract final class StaffDashboardMetrics {
       lines: [
         DashboardChartLine(
           label: 'Inbound',
-          color: AppColors.success,
+          role: DashboardSeriesRole.inbound,
           values: inbound,
         ),
         DashboardChartLine(
           label: 'Outbound',
-          color: const Color(0xFFC2410C),
+          role: DashboardSeriesRole.outbound,
           values: outbound,
         ),
       ],
@@ -1285,17 +1340,17 @@ abstract final class StaffDashboardMetrics {
       lines: [
         DashboardChartLine(
           label: 'Created',
-          color: AppColors.accent,
+          role: DashboardSeriesRole.orders,
           values: created,
         ),
         DashboardChartLine(
           label: 'Processing',
-          color: AppColors.info,
+          role: DashboardSeriesRole.transfer,
           values: processing,
         ),
         DashboardChartLine(
           label: 'Completed',
-          color: AppColors.success,
+          role: DashboardSeriesRole.inbound,
           values: completed,
         ),
       ],
@@ -1337,7 +1392,7 @@ abstract final class StaffDashboardMetrics {
       lines: [
         DashboardChartLine(
           label: 'Low Stock Risk',
-          color: AppColors.warning,
+          role: DashboardSeriesRole.lowStock,
           values: risk,
         ),
       ],
@@ -1501,7 +1556,10 @@ class StaffExecutiveAnalytics {
   final DashboardChartTimeSeries lowStockTrendSeries;
   final List<MapEntry<String, double>> warehouseUtilizationSeries;
 
-  factory StaffExecutiveAnalytics.from(StaffDashboardData data) {
+  factory StaffExecutiveAnalytics.from(
+    StaffDashboardData data,
+    WmsUiColors colors,
+  ) {
     final s = data.inventorySummary;
     final alerts = data.alerts;
     final tasks = StaffDashboardMetrics.taskCenter(data.tasks);
@@ -1509,11 +1567,14 @@ class StaffExecutiveAnalytics {
     final weekly = StaffDashboardMetrics.weeklyMovements(data);
     final weeklyOrders = StaffDashboardMetrics.weeklyOrderActivity(data);
     final avgCap = StaffDashboardMetrics.avgUtilization(data.warehouseStats);
-    final movementSeries = StaffDashboardMetrics.inventoryInboundOutboundSeries(data);
+    final movementSeries = StaffDashboardMetrics.inventoryInboundOutboundSeries(
+      data,
+    );
     final orderSeries = StaffDashboardMetrics.orderPipelineSeries(data);
     final lowStockSeries = StaffDashboardMetrics.lowStockTrendSeries(data);
-    final utilizationSeries =
-        StaffDashboardMetrics.warehouseUtilizationSeries(data.warehouseStats);
+    final utilizationSeries = StaffDashboardMetrics.warehouseUtilizationSeries(
+      data.warehouseStats,
+    );
     final totalStored = data.warehouseStats.fold<num>(
       0,
       (sum, w) => sum + w.totalUnits,
@@ -1555,7 +1616,9 @@ class StaffExecutiveAnalytics {
       executiveExpiredProducts: expired,
       executiveLowStockProducts: alerts.lowStockCount,
       avgCapacityUsed: avgCap,
-      totalUnitsStored: totalStored > 0 ? totalStored.toInt() : s.totalUnits.toInt(),
+      totalUnitsStored: totalStored > 0
+          ? totalStored.toInt()
+          : s.totalUnits.toInt(),
       warehouses: data.warehouseStats,
       weeklyOrderActivity: weeklyOrders,
       inventoryWeeklyTrend: _weeklyTrend(weekly),
@@ -1678,6 +1741,7 @@ class DashboardExecutiveInsights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final width = MediaQuery.sizeOf(context).width;
     final columns = MobileUi.kpiColumns(width);
 
@@ -1686,28 +1750,28 @@ class DashboardExecutiveInsights extends StatelessWidget {
         label: 'Weekly Inventory',
         value: '${analytics.weeklyMovements}',
         icon: Icons.trending_up_rounded,
-        color: AppColors.primary,
+        color: colors.primary,
         trend: analytics.inventoryWeeklyTrend,
       ),
       _DashboardInsightTile(
         label: 'Order Trend',
         value: '${analytics.weeklyOrderActivity}',
         icon: Icons.shopping_cart_outlined,
-        color: AppColors.accent,
+        color: colors.accent,
         trend: analytics.orderTrend,
       ),
       _DashboardInsightTile(
         label: 'Low Stock Trend',
         value: '${analytics.lowStockItems}',
         icon: Icons.warning_amber_rounded,
-        color: AppColors.warning,
+        color: colors.warning,
         trend: analytics.lowStockTrend,
       ),
       _DashboardInsightTile(
         label: 'Warehouse Util.',
         value: '${analytics.avgCapacityUsed}%',
         icon: Icons.warehouse_outlined,
-        color: AppColors.info,
+        color: colors.info,
         trend: analytics.warehouseUtilizationTrend,
       ),
     ];
@@ -1718,13 +1782,12 @@ class DashboardExecutiveInsights extends StatelessWidget {
         builder: (context, constraints) {
           final tileWidth =
               (constraints.maxWidth - DashboardUi.tileGap * (columns - 1)) /
-                  columns;
+              columns;
           return Wrap(
             spacing: DashboardUi.tileGap,
             runSpacing: DashboardUi.tileGap,
             children: [
-              for (final tile in tiles)
-                SizedBox(width: tileWidth, child: tile),
+              for (final tile in tiles) SizedBox(width: tileWidth, child: tile),
             ],
           );
         },
@@ -1755,10 +1818,13 @@ class _DashboardInsightTile extends StatelessWidget {
       ExecutiveTrendDirection.down => Icons.arrow_downward_rounded,
       ExecutiveTrendDirection.stable => Icons.remove_rounded,
     };
+    final colors = WmsUiColors.of(context);
     final trendColor = switch (trend.direction) {
-      ExecutiveTrendDirection.up => AppColors.success,
-      ExecutiveTrendDirection.down => AppColors.error,
-      ExecutiveTrendDirection.stable => Theme.of(context).colorScheme.onSurfaceVariant,
+      ExecutiveTrendDirection.up => colors.success,
+      ExecutiveTrendDirection.down => colors.error,
+      ExecutiveTrendDirection.stable => Theme.of(
+        context,
+      ).colorScheme.onSurfaceVariant,
     };
 
     return AppCard(
@@ -1792,10 +1858,9 @@ class _DashboardInsightTile extends StatelessWidget {
             trend.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.supportingDense(context).copyWith(
-                  color: trendColor,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: WmsDesignTokens.supportingDense(
+              context,
+            ).copyWith(color: trendColor, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -1820,6 +1885,7 @@ class DashboardInventoryAnalytics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = (inStock + lowStock + outOfStock + expired).clamp(1, 999999);
 
     return WmsDashboardSection(
@@ -1832,7 +1898,7 @@ class DashboardInventoryAnalytics extends StatelessWidget {
             _AnalyticsStatusRow(
               label: 'In Stock',
               count: inStock,
-              color: AppColors.success,
+              color: colors.success,
               icon: Icons.check_circle_outline,
               fraction: inStock / total,
             ),
@@ -1840,7 +1906,7 @@ class DashboardInventoryAnalytics extends StatelessWidget {
             _AnalyticsStatusRow(
               label: 'Low Stock',
               count: lowStock,
-              color: AppColors.warning,
+              color: colors.warning,
               icon: Icons.warning_amber_rounded,
               fraction: lowStock / total,
             ),
@@ -1848,7 +1914,7 @@ class DashboardInventoryAnalytics extends StatelessWidget {
             _AnalyticsStatusRow(
               label: 'Out of Stock',
               count: outOfStock,
-              color: AppColors.error,
+              color: colors.error,
               icon: Icons.remove_shopping_cart_outlined,
               fraction: outOfStock / total,
             ),
@@ -1884,6 +1950,7 @@ class _AnalyticsStatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Row(
       children: [
         Icon(icon, size: WmsIconSizes.status, color: color),
@@ -1897,16 +1964,16 @@ class _AnalyticsStatusRow extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const Spacer(),
                   Text(
                     '$count',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
                   ),
                 ],
               ),
@@ -1916,7 +1983,7 @@ class _AnalyticsStatusRow extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: count > 0 ? fraction.clamp(0.05, 1.0) : 0,
                   minHeight: 4,
-                  backgroundColor: AppColors.surfaceVariant,
+                  backgroundColor: colors.surfaceElevated,
                   color: color,
                 ),
               ),
@@ -1945,6 +2012,7 @@ class DashboardTaskAnalytics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Task Analytics',
       child: LayoutBuilder(
@@ -1959,7 +2027,7 @@ class DashboardTaskAnalytics extends StatelessWidget {
                 child: _TaskMetricTile(
                   label: 'Pending',
                   count: pending,
-                  color: AppColors.warning,
+                  color: colors.warning,
                   icon: Icons.schedule_outlined,
                 ),
               ),
@@ -1968,7 +2036,7 @@ class DashboardTaskAnalytics extends StatelessWidget {
                 child: _TaskMetricTile(
                   label: 'In Progress',
                   count: inProgress,
-                  color: AppColors.info,
+                  color: colors.info,
                   icon: Icons.play_circle_outline,
                 ),
               ),
@@ -1977,7 +2045,7 @@ class DashboardTaskAnalytics extends StatelessWidget {
                 child: _TaskMetricTile(
                   label: 'Completed',
                   count: completed,
-                  color: AppColors.success,
+                  color: colors.success,
                   icon: Icons.check_circle_outline,
                 ),
               ),
@@ -1987,7 +2055,7 @@ class DashboardTaskAnalytics extends StatelessWidget {
                   label: 'Completion Rate',
                   count: completionRate,
                   suffix: '%',
-                  color: AppColors.primary,
+                  color: colors.primary,
                   icon: Icons.donut_large_outlined,
                 ),
               ),
@@ -2016,6 +2084,7 @@ class DashboardActivitySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
       title: 'Activity Summary',
       subtitle: "Today's operational totals",
@@ -2032,7 +2101,7 @@ class DashboardActivitySummary extends StatelessWidget {
                 label: 'Transfers',
                 value: '$transfers',
                 icon: Icons.swap_horiz_rounded,
-                color: AppColors.info,
+                color: colors.info,
               ),
             ),
             Expanded(
@@ -2040,7 +2109,7 @@ class DashboardActivitySummary extends StatelessWidget {
                 label: 'Inbound',
                 value: '$inbound',
                 icon: Icons.download_rounded,
-                color: AppColors.success,
+                color: colors.success,
               ),
             ),
             Expanded(
@@ -2048,7 +2117,7 @@ class DashboardActivitySummary extends StatelessWidget {
                 label: 'Outbound',
                 value: '$outbound',
                 icon: Icons.upload_rounded,
-                color: AppColors.outbound,
+                color: colors.outbound,
               ),
             ),
             Expanded(
@@ -2056,7 +2125,7 @@ class DashboardActivitySummary extends StatelessWidget {
                 label: 'Orders',
                 value: '$orders',
                 icon: Icons.shopping_cart_outlined,
-                color: AppColors.accent,
+                color: colors.accent,
               ),
             ),
           ],
@@ -2085,10 +2154,7 @@ class _ActivitySummaryTile extends StatelessWidget {
       children: [
         Icon(icon, size: WmsIconSizes.kpi, color: color),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: WmsDesignTokens.metricValue(context),
-        ),
+        Text(value, style: WmsDesignTokens.metricValue(context)),
         Text(
           label,
           textAlign: TextAlign.center,
@@ -2118,6 +2184,7 @@ class DashboardAlertsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = criticalAlerts + expiredProducts + lowStockItems;
 
     return WmsDashboardSection(
@@ -2126,7 +2193,7 @@ class DashboardAlertsSummary extends StatelessWidget {
       child: AppCard(
         elevated: true,
         onTap: onTap,
-        accentColor: total > 0 ? AppColors.error : null,
+        accentColor: total > 0 ? colors.error : null,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Row(
           children: [
@@ -2135,10 +2202,14 @@ class DashboardAlertsSummary extends StatelessWidget {
                 label: 'Critical',
                 count: criticalAlerts,
                 icon: Icons.priority_high_rounded,
-                color: AppColors.error,
+                color: colors.error,
               ),
             ),
-            Container(width: 1, height: 44, color: AppColors.border.withValues(alpha: 0.5)),
+            Container(
+              width: 1,
+              height: 44,
+              color: colors.border.withValues(alpha: 0.5),
+            ),
             Expanded(
               child: _AlertSummaryTile(
                 label: 'Expired',
@@ -2147,13 +2218,17 @@ class DashboardAlertsSummary extends StatelessWidget {
                 color: const Color(0xFF7C3AED),
               ),
             ),
-            Container(width: 1, height: 44, color: AppColors.border.withValues(alpha: 0.5)),
+            Container(
+              width: 1,
+              height: 44,
+              color: colors.border.withValues(alpha: 0.5),
+            ),
             Expanded(
               child: _AlertSummaryTile(
                 label: 'Low Stock',
                 count: lowStockItems,
                 icon: Icons.trending_down_rounded,
-                color: AppColors.warning,
+                color: colors.warning,
               ),
             ),
           ],
@@ -2211,6 +2286,7 @@ class DashboardWarehousePerformance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     if (warehouses.isEmpty) return const SizedBox.shrink();
 
     return WmsDashboardSection(
@@ -2229,7 +2305,7 @@ class DashboardWarehousePerformance extends StatelessWidget {
                     label: 'Units',
                     value: WmsFormatters.quantity(totalUnitsStored),
                     icon: Icons.inventory_2_outlined,
-                    color: AppColors.primary,
+                    color: colors.primary,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -2238,7 +2314,7 @@ class DashboardWarehousePerformance extends StatelessWidget {
                     label: 'Capacity',
                     value: '$avgCapacityUsed%',
                     icon: Icons.pie_chart_outline_rounded,
-                    color: AppColors.info,
+                    color: colors.info,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -2247,7 +2323,7 @@ class DashboardWarehousePerformance extends StatelessWidget {
                     label: 'Sites',
                     value: '${warehouses.length}',
                     icon: Icons.warehouse_outlined,
-                    color: AppColors.accent,
+                    color: colors.accent,
                   ),
                 ),
               ],
@@ -2295,14 +2371,9 @@ class _WhPerformanceMetric extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.metricValue(context).copyWith(
-                  fontSize: 18,
-                ),
+            style: WmsDesignTokens.metricValue(context).copyWith(fontSize: 18),
           ),
-          Text(
-            label,
-            style: WmsDesignTokens.supportingDense(context),
-          ),
+          Text(label, style: WmsDesignTokens.supportingDense(context)),
         ],
       ),
     );
@@ -2316,22 +2387,23 @@ class _WarehousePerformanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final util = warehouse.utilization;
     final status = util >= 85
         ? 'High Load'
         : util >= 60
-            ? 'Operational'
-            : 'Available';
+        ? 'Operational'
+        : 'Available';
     final statusColor = util >= 85
-        ? AppColors.error
+        ? colors.error
         : util >= 60
-            ? AppColors.warning
-            : AppColors.success;
+        ? colors.warning
+        : colors.success;
     final barColor = util >= 85
-        ? AppColors.error
+        ? colors.error
         : util >= 60
-            ? AppColors.warning
-            : AppColors.success;
+        ? colors.warning
+        : colors.success;
 
     return Row(
       children: [
@@ -2341,9 +2413,9 @@ class _WarehousePerformanceRow extends StatelessWidget {
             warehouse.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         Expanded(
@@ -2354,7 +2426,7 @@ class _WarehousePerformanceRow extends StatelessWidget {
               value: (util / 100).clamp(0.0, 1.0),
               minHeight: 4,
               color: barColor,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: colors.surfaceElevated,
             ),
           ),
         ),
@@ -2366,10 +2438,9 @@ class _WarehousePerformanceRow extends StatelessWidget {
             textAlign: TextAlign.end,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.supportingDense(context).copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: WmsDesignTokens.supportingDense(
+              context,
+            ).copyWith(color: statusColor, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -2400,17 +2471,11 @@ List<WmsTimelineEntry> buildStaffActivityFeed(StaffDashboardData data) {
 
   for (final t in data.tasks) {
     final time = t.updatedAt ?? t.createdAt ?? t.dueDate;
-    items.add((
-      time: time,
-      entry: _taskActivityEntry(t, time),
-    ));
+    items.add((time: time, entry: _taskActivityEntry(t, time)));
   }
 
   for (final insight in data.insights) {
-    items.add((
-      time: DateTime.now(),
-      entry: _insightActivityEntry(insight),
-    ));
+    items.add((time: DateTime.now(), entry: _insightActivityEntry(insight)));
   }
 
   items.sort((a, b) {
@@ -2437,9 +2502,9 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       icon: lower.contains('deliver')
           ? Icons.local_shipping_outlined
           : Icons.shopping_bag_outlined,
-      iconColor: lower.contains('deliver') ? AppColors.success : AppColors.accent,
-      iconBackground:
-          lower.contains('deliver') ? AppColors.successLight : AppColors.accentLight,
+      tone: lower.contains('deliver')
+          ? WmsTimelineTone.success
+          : WmsTimelineTone.accent,
     );
   }
   if (lower.contains('expir')) {
@@ -2448,8 +2513,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.event_busy_outlined,
-      iconColor: const Color(0xFF7C3AED),
-      iconBackground: const Color(0xFFEDE9FE),
+      tone: WmsTimelineTone.expired,
     );
   }
   if (lower.contains('low stock') || lower.contains('out of stock')) {
@@ -2458,8 +2522,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.trending_down_rounded,
-      iconColor: AppColors.warning,
-      iconBackground: AppColors.warningLight,
+      tone: WmsTimelineTone.warning,
     );
   }
   if (lower.contains('warehouse')) {
@@ -2468,8 +2531,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.warehouse_outlined,
-      iconColor: AppColors.info,
-      iconBackground: AppColors.infoLight,
+      tone: WmsTimelineTone.info,
     );
   }
   if (lower.contains('task')) {
@@ -2478,8 +2540,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.assignment_outlined,
-      iconColor: AppColors.primary,
-      iconBackground: AppColors.primaryLight,
+      tone: WmsTimelineTone.primary,
     );
   }
   if (lower.contains('transfer')) {
@@ -2488,8 +2549,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.swap_horiz_rounded,
-      iconColor: AppColors.info,
-      iconBackground: AppColors.infoLight,
+      tone: WmsTimelineTone.info,
     );
   }
   if (severity.contains('critical') || severity.contains('high')) {
@@ -2498,8 +2558,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
       description: insight.message,
       relativeTime: 'Recent',
       icon: Icons.priority_high_rounded,
-      iconColor: AppColors.error,
-      iconBackground: AppColors.errorLight,
+      tone: WmsTimelineTone.error,
     );
   }
   return WmsTimelineEntry(
@@ -2507,8 +2566,7 @@ WmsTimelineEntry _insightActivityEntry(DashboardInsight insight) {
     description: insight.message,
     relativeTime: 'Recent',
     icon: Icons.inventory_2_outlined,
-    iconColor: AppColors.primary,
-    iconBackground: AppColors.primaryLight,
+    tone: WmsTimelineTone.primary,
   );
 }
 
@@ -2531,8 +2589,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.inventory_2_outlined,
-        iconColor: AppColors.info,
-        iconBackground: AppColors.infoLight,
+        tone: WmsTimelineTone.info,
       );
     case WmsTaskTypes.outboundDispatch:
       return WmsTimelineEntry(
@@ -2540,8 +2597,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.local_shipping_outlined,
-        iconColor: const Color(0xFFC2410C),
-        iconBackground: const Color(0xFFFFEDD5),
+        tone: WmsTimelineTone.outbound,
       );
     case WmsTaskTypes.inventoryReceive:
       return WmsTimelineEntry(
@@ -2549,8 +2605,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.download_rounded,
-        iconColor: AppColors.success,
-        iconBackground: AppColors.successLight,
+        tone: WmsTimelineTone.success,
       );
     case WmsTaskTypes.stockTransfer:
       return WmsTimelineEntry(
@@ -2558,8 +2613,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.swap_horiz_rounded,
-        iconColor: AppColors.info,
-        iconBackground: AppColors.infoLight,
+        tone: WmsTimelineTone.info,
       );
     case WmsTaskTypes.inventoryCount:
       return WmsTimelineEntry(
@@ -2567,8 +2621,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.fact_check_outlined,
-        iconColor: AppColors.primary,
-        iconBackground: AppColors.primaryLight,
+        tone: WmsTimelineTone.primary,
       );
     case WmsTaskTypes.stockAdjustment:
       return WmsTimelineEntry(
@@ -2576,8 +2629,7 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.tune_rounded,
-        iconColor: AppColors.accent,
-        iconBackground: AppColors.accentLight,
+        tone: WmsTimelineTone.accent,
       );
     case WmsTaskTypes.inspection:
       return WmsTimelineEntry(
@@ -2585,38 +2637,28 @@ WmsTimelineEntry _taskActivityEntry(WarehouseTask task, DateTime? time) {
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.verified_outlined,
-        iconColor: AppColors.success,
-        iconBackground: AppColors.successLight,
+        tone: WmsTimelineTone.success,
       );
     default:
       final verb = rejected
           ? 'Task Rejected'
           : completed
-              ? 'Task Completed'
-              : 'Task Updated';
+          ? 'Task Completed'
+          : 'Task Updated';
       return WmsTimelineEntry(
         title: verb,
         description: detail,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: completed ? Icons.task_alt_rounded : Icons.assignment_outlined,
-        iconColor: completed ? AppColors.success : AppColors.accent,
-        iconBackground:
-            completed ? AppColors.successLight : AppColors.accentLight,
+        tone: completed ? WmsTimelineTone.success : WmsTimelineTone.accent,
       );
   }
 }
 
 /// Derives admin dashboard metrics from management data + widgets fields.
 abstract final class AdminDashboardMetrics {
-  static ({
-    int inbound,
-    int outbound,
-    int transfers,
-    int orders,
-  }) operationsToday({
-    required int todayMovements,
-    required int pendingOrders,
-  }) {
+  static ({int inbound, int outbound, int transfers, int orders})
+  operationsToday({required int todayMovements, required int pendingOrders}) {
     if (todayMovements <= 0) {
       return (inbound: 0, outbound: 0, transfers: 0, orders: pendingOrders);
     }

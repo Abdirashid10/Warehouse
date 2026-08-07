@@ -2,7 +2,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logisticsmobile/core/constants/wms/task_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/app_typography.dart';
 import 'package:logisticsmobile/core/utils/task_workflow_utils.dart';
@@ -16,17 +15,30 @@ import 'package:logisticsmobile/features/dashboard/domain/entities/staff_dashboa
 import 'package:logisticsmobile/features/dashboard/presentation/widgets/dashboard_enterprise_widgets.dart';
 import 'package:logisticsmobile/features/dashboard/presentation/widgets/staff_dashboard_header.dart';
 import 'package:logisticsmobile/features/inventory/domain/entities/inventory_item.dart';
-import 'package:logisticsmobile/features/inventory/presentation/widgets/inventory_enterprise_widgets.dart';
 import 'package:logisticsmobile/features/notifications/domain/entities/app_notification.dart';
 import 'package:logisticsmobile/features/orders/domain/entities/warehouse_order.dart';
 import 'package:logisticsmobile/features/tasks/domain/entities/warehouse_task.dart';
 import 'package:logisticsmobile/features/tasks/presentation/cubit/tasks_cubit.dart';
 import 'package:logisticsmobile/routes/wms_route_paths.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
+import 'package:logisticsmobile/widgets/wms/wms_premium_cards.dart';
 import 'package:logisticsmobile/widgets/wms/enterprise/wms_activity_timeline.dart';
 import 'package:logisticsmobile/widgets/wms/enterprise/wms_dashboard_section.dart';
 import 'package:logisticsmobile/widgets/wms/wms_badges.dart';
 import 'package:logisticsmobile/widgets/wms/wms_state_views.dart';
+
+/// Row height for the dashboard's KPI grids.
+///
+/// A fixed extent was the root of the "BOTTOM OVERFLOWED" banners: the tiles
+/// grow with the user's text scale while the row did not. This tracks both the
+/// device width and the accessibility text scale, so the row always has room
+/// for the tile it hosts.
+double staffKpiGridExtent(BuildContext context) {
+  final width = MediaQuery.sizeOf(context).width;
+  final scale = MediaQuery.textScalerOf(context).scale(100) / 100;
+  final base = MobileUi.kpiGridMainAxisExtentFor(width);
+  return base * scale.clamp(1.0, 1.35);
+}
 
 /// Staff-only operations dashboard — mobile-first layout (≤430dp).
 class StaffOperationsDashboardBody extends StatelessWidget {
@@ -53,14 +65,16 @@ class StaffOperationsDashboardBody extends StatelessWidget {
   final String inventoryRoute;
   final String reportsRoute;
   final String notificationsRoute;
-  final void Function(WarehouseTask task, TaskWorkflowAction action) onTaskAction;
+  final void Function(WarehouseTask task, TaskWorkflowAction action)
+  onTaskAction;
   final String? selectedKpiFilter;
   final ValueChanged<String?>? onKpiFilterTap;
 
   static const _sectionGap = MobileUi.dashboardSectionGap;
 
-  Color _cardColor(WmsUiColors colors) =>
-      colors.isDark ? const Color(0xFF111827) : Colors.white;
+  /// Card face for this dashboard — the themed surface, so the portal follows
+  /// a mode switch instead of holding a hardcoded white.
+  Color _cardColor(WmsUiColors colors) => colors.surface;
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +150,9 @@ class StaffOperationsDashboardBody extends StatelessWidget {
           title: 'My Active Tasks',
           count: activeTasks.length,
           actionLabel: activeTasks.isNotEmpty ? 'View all' : null,
-          onAction: activeTasks.isNotEmpty ? () => context.push(tasksRoute) : null,
+          onAction: activeTasks.isNotEmpty
+              ? () => context.push(tasksRoute)
+              : null,
           child: activeTasks.isEmpty
               ? AppCard(
                   elevated: true,
@@ -200,7 +216,9 @@ class StaffOperationsDashboardBody extends StatelessWidget {
         WmsDashboardSection(
           title: 'Warehouse Performance',
           actionLabel: allWarehouses.isNotEmpty ? 'Manage →' : null,
-          onAction: allWarehouses.isNotEmpty ? () => context.go(inventoryRoute) : null,
+          onAction: allWarehouses.isNotEmpty
+              ? () => context.go(inventoryRoute)
+              : null,
           child: allWarehouses.isEmpty
               ? AppCard(
                   elevated: true,
@@ -209,7 +227,8 @@ class StaffOperationsDashboardBody extends StatelessWidget {
                   child: const WmsEmptyState(
                     icon: Icons.warehouse_outlined,
                     title: 'No warehouses',
-                    message: 'Warehouse utilization will appear when sites are configured.',
+                    message:
+                        'Warehouse utilization will appear when sites are configured.',
                   ),
                 )
               : ListView.separated(
@@ -237,9 +256,8 @@ class StaffOperationsDashboardBody extends StatelessWidget {
             summary: taskSummary,
             tasks: overviewTasks,
             cardColor: cardColor,
-            onViewTask: (task) => context.push(
-              WmsRoutePaths.taskDetail(context, task.id),
-            ),
+            onViewTask: (task) =>
+                context.push(WmsRoutePaths.taskDetail(context, task.id)),
             onTaskAction: onTaskAction,
           ),
         ),
@@ -326,7 +344,11 @@ class StaffOperationsDashboardBody extends StatelessWidget {
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (var i = 0; i < data.recentNotifications.length; i++) ...[
+                    for (
+                      var i = 0;
+                      i < data.recentNotifications.length;
+                      i++
+                    ) ...[
                       if (i > 0) const SizedBox(height: AppSpacing.sm),
                       _StaffNotificationCard(
                         key: ValueKey(data.recentNotifications[i].id),
@@ -355,10 +377,7 @@ class StaffOperationsDashboardBody extends StatelessWidget {
                 )
               : AppCard(
                   elevated: true,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.md,
-                    horizontal: AppSpacing.lg,
-                  ),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   backgroundColor: cardColor,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -484,12 +503,10 @@ class StaffOperationsDashboardBody extends StatelessWidget {
         dt.day == now.day;
 
     return tasks.where((t) {
-      final isCount = t.taskType == WmsTaskTypes.inventoryCount ||
-          t.taskType == 'Audit';
+      final isCount =
+          t.taskType == WmsTaskTypes.inventoryCount || t.taskType == 'Audit';
       if (!isCount) return false;
-      return isToday(t.updatedAt) ||
-          isToday(t.createdAt) ||
-          isToday(t.dueDate);
+      return isToday(t.updatedAt) || isToday(t.createdAt) || isToday(t.dueDate);
     }).length;
   }
 }
@@ -558,7 +575,10 @@ class _StaffTaskStatisticsGrid extends StatelessWidget {
     return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: MobileUi.phoneKpiGridDelegate(spacing: AppSpacing.sm),
+      gridDelegate: MobileUi.phoneKpiGridDelegate(
+        spacing: AppSpacing.sm,
+        mainAxisExtent: staffKpiGridExtent(context),
+      ),
       children: [
         for (final item in items)
           _StaffStatCard(
@@ -598,18 +618,37 @@ class _StaffOperationsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final width = MediaQuery.sizeOf(context).width;
     final items = [
-      _OpsTile('Inbound', inbound, Icons.move_to_inbox_outlined, AppColors.success),
-      _OpsTile('Outbound', outbound, Icons.local_shipping_outlined, const Color(0xFFC2410C)),
-      _OpsTile('Transfers', transfers, Icons.swap_horiz_rounded, AppColors.info),
-      _OpsTile('Count Tasks', countTasks, Icons.fact_check_outlined, AppColors.accent),
+      _OpsTile(
+        'Inbound',
+        inbound,
+        Icons.move_to_inbox_outlined,
+        colors.success,
+      ),
+      _OpsTile(
+        'Outbound',
+        outbound,
+        Icons.local_shipping_outlined,
+        const Color(0xFFC2410C),
+      ),
+      _OpsTile('Transfers', transfers, Icons.swap_horiz_rounded, colors.info),
+      _OpsTile(
+        'Count Tasks',
+        countTasks,
+        Icons.fact_check_outlined,
+        colors.accent,
+      ),
     ];
 
     return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: MobileUi.phoneKpiGridDelegate(spacing: AppSpacing.sm),
+      gridDelegate: MobileUi.phoneKpiGridDelegate(
+        spacing: AppSpacing.sm,
+        mainAxisExtent: staffKpiGridExtent(context),
+      ),
       children: [
         for (final item in items)
           AppCard(
@@ -671,49 +710,50 @@ class _StaffOperationalAlertsCard extends StatelessWidget {
   final Color cardColor;
   final VoidCallback onTap;
 
-  List<_StaffOperationalAlertData> get _items => [
-        _StaffOperationalAlertData(
-          'Out Of Stock',
-          outOfStock,
-          AppColors.error,
-          Icons.remove_shopping_cart_outlined,
-        ),
-        _StaffOperationalAlertData(
-          'Low Stock',
-          lowStock,
-          AppColors.warning,
-          Icons.trending_down_rounded,
-        ),
-        _StaffOperationalAlertData(
-          'Expired',
-          expired,
-          const Color(0xFF7C3AED),
-          Icons.event_busy_outlined,
-        ),
-        _StaffOperationalAlertData(
-          'Expiring Soon',
-          expiringSoon,
-          AppColors.info,
-          Icons.schedule_rounded,
-        ),
-        _StaffOperationalAlertData(
-          'Pending Orders',
-          pendingOrders,
-          AppColors.primary,
-          Icons.shopping_cart_outlined,
-        ),
-        _StaffOperationalAlertData(
-          'Urgent Tasks',
-          urgentTasks,
-          AppColors.error,
-          Icons.access_time_filled,
-        ),
-      ];
+  List<_StaffOperationalAlertData> _itemsFor(WmsUiColors colors) => [
+    _StaffOperationalAlertData(
+      'Out Of Stock',
+      outOfStock,
+      colors.error,
+      Icons.remove_shopping_cart_outlined,
+    ),
+    _StaffOperationalAlertData(
+      'Low Stock',
+      lowStock,
+      colors.warning,
+      Icons.trending_down_rounded,
+    ),
+    _StaffOperationalAlertData(
+      'Expired',
+      expired,
+      const Color(0xFF7C3AED),
+      Icons.event_busy_outlined,
+    ),
+    _StaffOperationalAlertData(
+      'Expiring Soon',
+      expiringSoon,
+      colors.info,
+      Icons.schedule_rounded,
+    ),
+    _StaffOperationalAlertData(
+      'Pending Orders',
+      pendingOrders,
+      colors.primary,
+      Icons.shopping_cart_outlined,
+    ),
+    _StaffOperationalAlertData(
+      'Urgent Tasks',
+      urgentTasks,
+      colors.error,
+      Icons.access_time_filled,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final colors = WmsUiColors.of(context);
         final width = constraints.maxWidth;
         final isCompact = width < _compactBreakpoint;
 
@@ -728,7 +768,7 @@ class _StaffOperationalAlertsCard extends StatelessWidget {
               mainAxisExtent: MobileUi.kpiGridMainAxisExtentFor(width),
             ),
             children: [
-              for (final item in _items)
+              for (final item in _itemsFor(colors))
                 _StaffOperationalAlertTile(
                   data: item,
                   cardColor: cardColor,
@@ -745,7 +785,7 @@ class _StaffOperationalAlertsCard extends StatelessWidget {
           spacing: _gridSpacing,
           runSpacing: _gridSpacing,
           children: [
-            for (final item in _items)
+            for (final item in _itemsFor(colors))
               SizedBox(
                 width: tileWidth,
                 child: _StaffOperationalAlertTile(
@@ -791,42 +831,18 @@ class _StaffOperationalAlertTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      elevated: true,
+    // Same tile as the task grids, so Operational Alerts stops being a third
+    // card style on one screen. `highlighted` draws the severity hairline when
+    // the count is non-zero, which is the only state worth pulling the eye.
+    return WmsMetricCard(
+      icon: data.icon,
+      color: data.color,
+      value: '${data.count}',
+      label: data.label,
       onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      backgroundColor: cardColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(data.icon, size: WmsIconSizes.kpi, color: data.color),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${data.count}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WmsDesignTokens.operationalAlertCount(
-                context,
-                color: data.color,
-                fontSize: 20,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            data.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.operationalAlertLabel(
-              context,
-              color: data.color,
-            ),
-          ),
-        ],
-      ),
+      emphasizeValue: true,
+      highlighted: data.count > 0,
+      compact: true,
     );
   }
 }
@@ -867,9 +883,9 @@ class _StaffInventoryHealthSection extends StatelessWidget {
             Text(
               'Stock status distribution',
               textAlign: TextAlign.center,
-              style: WmsDesignTokens.supporting(context).copyWith(
-                color: colors.textSecondary,
-              ),
+              style: WmsDesignTokens.supporting(
+                context,
+              ).copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: 12),
             _StaffMobileInventoryDonut(
@@ -900,12 +916,17 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
 
   static const _chartSize = 180.0;
 
-  static const _segments = [
-    (label: 'In Stock', color: AppColors.success),
-    (label: 'Low Stock', color: AppColors.warning),
-    (label: 'Out Of Stock', color: AppColors.error),
-    (label: 'Expired', color: InventoryUi.expiredPurple),
-  ];
+  /// Segment palette, resolved per brightness.
+  ///
+  /// Was a `static const` list, which pinned the light-mode swatches into
+  /// every theme — a static field has no context to resolve against.
+  static List<({String label, Color color})> _segmentsFor(WmsUiColors colors) =>
+      [
+        (label: 'In Stock', color: colors.success),
+        (label: 'Low Stock', color: colors.warning),
+        (label: 'Out Of Stock', color: colors.error),
+        (label: 'Expired', color: colors.expired),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -919,9 +940,9 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
         child: Text(
           'No inventory distribution data',
           textAlign: TextAlign.center,
-          style: WmsDesignTokens.supporting(context).copyWith(
-            color: colors.textSecondary,
-          ),
+          style: WmsDesignTokens.supporting(
+            context,
+          ).copyWith(color: colors.textSecondary),
         ),
       );
     }
@@ -947,7 +968,7 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
                   sections.add(
                     PieChartSectionData(
                       value: value,
-                      color: _segments[i].color,
+                      color: _segmentsFor(colors)[i].color,
                       radius: ringWidth.clamp(16, 40),
                       showTitle: false,
                     ),
@@ -980,11 +1001,12 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
                         ),
                         Text(
                           'LINES',
-                          style: WmsDesignTokens.supportingDense(context).copyWith(
-                            color: colors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
+                          style: WmsDesignTokens.supportingDense(context)
+                              .copyWith(
+                                color: colors.textSecondary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
                         ),
                       ],
                     ),
@@ -995,7 +1017,7 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        for (var i = 0; i < _segments.length; i++)
+        for (var i = 0; i < _segmentsFor(colors).length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Row(
@@ -1004,19 +1026,19 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: _segments[i].color,
+                    color: _segmentsFor(colors)[i].color,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(
                   child: Text(
-                    _segments[i].label,
+                    _segmentsFor(colors)[i].label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: WmsDesignTokens.supporting(context).copyWith(
-                      color: colors.textPrimary,
-                    ),
+                    style: WmsDesignTokens.supporting(
+                      context,
+                    ).copyWith(color: colors.textPrimary),
                   ),
                 ),
                 Text(
@@ -1035,10 +1057,7 @@ class _StaffMobileInventoryDonut extends StatelessWidget {
 }
 
 class _StaffWarehousePerformanceCard extends StatelessWidget {
-  const _StaffWarehousePerformanceCard({
-    super.key,
-    required this.stat,
-  });
+  const _StaffWarehousePerformanceCard({super.key, required this.stat});
 
   final WarehouseStat stat;
 
@@ -1048,18 +1067,17 @@ class _StaffWarehousePerformanceCard extends StatelessWidget {
   static Color _primaryText(WmsUiColors colors) =>
       colors.isDark ? Colors.white : AppTypographyColors.primaryText;
 
-  static Color _secondaryText(WmsUiColors colors) =>
-      colors.isDark
-          ? AppThemeColors.darkTextSecondary
-          : AppTypographyColors.secondaryText;
+  static Color _secondaryText(WmsUiColors colors) => colors.isDark
+      ? AppThemeColors.darkTextSecondary
+      : AppTypographyColors.secondaryText;
 
   static Color _progressTrack(WmsUiColors colors) =>
       colors.isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0);
 
-  static Color _capacityColor(int utilization) {
-    if (utilization <= 30) return AppColors.success;
-    if (utilization <= 70) return AppColors.warning;
-    return AppColors.error;
+  static Color _capacityColor(int utilization, WmsUiColors colors) {
+    if (utilization <= 30) return colors.success;
+    if (utilization <= 70) return colors.warning;
+    return colors.error;
   }
 
   @override
@@ -1068,7 +1086,7 @@ class _StaffWarehousePerformanceCard extends StatelessWidget {
     final utilization = stat.utilization.clamp(0, 100);
     final primaryText = _primaryText(colors);
     final secondaryText = _secondaryText(colors);
-    final barColor = _capacityColor(utilization);
+    final barColor = _capacityColor(utilization, colors);
 
     return AppCard(
       elevated: true,
@@ -1165,28 +1183,66 @@ class _StaffPerfMetaRow extends StatelessWidget {
   final String value;
 
   @override
+  Widget build(BuildContext context) =>
+      StaffMetaRow(label: label, value: value);
+}
+
+/// One labelled metadata line: `Customer: Fakhrudiin`.
+///
+/// The label and value used to be adjacent `Text` runs with no punctuation or
+/// gap, so they painted as a single word ("CustomerFakhrudiin"). The label now
+/// carries its colon and owns a fixed column, which both separates the pair and
+/// aligns every value down the card.
+class StaffMetaRow extends StatelessWidget {
+  const StaffMetaRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+
+  /// Renders the value in the error colour — used for overdue dates.
+  final bool highlight;
+
+  /// Width of the label column. Wide enough for "Warehouse:" at 1.3× scale
+  /// before the label itself starts to ellipsize.
+  static const double labelWidth = 96;
+
+  @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Flexible(
-            flex: 2,
+          SizedBox(
+            width: labelWidth,
             child: Text(
-              label,
-              style: WmsDesignTokens.supporting(context).copyWith(
-                color: colors.textSecondary,
+              '$label:',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: WmsDesignTokens.supportingDense(context).copyWith(
+                color: colors.textTertiary,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
               ),
             ),
           ),
-          Flexible(
-            flex: 3,
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: Text(
               value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: WmsDesignTokens.body(context).copyWith(
-                color: colors.textPrimary,
+                color: highlight ? colors.error : colors.textPrimary,
                 fontWeight: FontWeight.w600,
+                height: 1.35,
               ),
             ),
           ),
@@ -1209,24 +1265,55 @@ class _StaffTaskOverviewSection extends StatelessWidget {
   final List<WarehouseTask> tasks;
   final Color cardColor;
   final void Function(WarehouseTask task) onViewTask;
-  final void Function(WarehouseTask task, TaskWorkflowAction action) onTaskAction;
+  final void Function(WarehouseTask task, TaskWorkflowAction action)
+  onTaskAction;
 
   @override
   Widget build(BuildContext context) {
     final stats = [
       _StatTile('Total', '${summary.total}', Icons.list_alt, null, null),
-      _StatTile('Awaiting', '${summary.awaiting}', Icons.schedule_outlined,
-          WmsTaskStatuses.pending, null),
-      _StatTile('Accepted', '${summary.accepted}', Icons.thumb_up_alt_outlined,
-          WmsTaskStatuses.accepted, null),
-      _StatTile('In Progress', '${summary.inProgress}',
-          Icons.play_circle_outline, WmsTaskStatuses.inProgress, null),
-      _StatTile('Completed', '${summary.completed}', Icons.check_circle_outline,
-          WmsTaskStatuses.completed, null),
-      _StatTile('Rejected', '${summary.rejected}', Icons.cancel_outlined,
-          WmsTaskStatuses.rejected, null),
-      _StatTile('Overdue', '${summary.overdue}', Icons.event_busy_outlined,
-          WmsTaskStatuses.overdue, null),
+      _StatTile(
+        'Awaiting',
+        '${summary.awaiting}',
+        Icons.schedule_outlined,
+        WmsTaskStatuses.pending,
+        null,
+      ),
+      _StatTile(
+        'Accepted',
+        '${summary.accepted}',
+        Icons.thumb_up_alt_outlined,
+        WmsTaskStatuses.accepted,
+        null,
+      ),
+      _StatTile(
+        'In Progress',
+        '${summary.inProgress}',
+        Icons.play_circle_outline,
+        WmsTaskStatuses.inProgress,
+        null,
+      ),
+      _StatTile(
+        'Completed',
+        '${summary.completed}',
+        Icons.check_circle_outline,
+        WmsTaskStatuses.completed,
+        null,
+      ),
+      _StatTile(
+        'Rejected',
+        '${summary.rejected}',
+        Icons.cancel_outlined,
+        WmsTaskStatuses.rejected,
+        null,
+      ),
+      _StatTile(
+        'Overdue',
+        '${summary.overdue}',
+        Icons.event_busy_outlined,
+        WmsTaskStatuses.overdue,
+        null,
+      ),
     ];
 
     return Column(
@@ -1240,7 +1327,10 @@ class _StaffTaskOverviewSection extends StatelessWidget {
           child: GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: MobileUi.phoneKpiGridDelegate(spacing: AppSpacing.sm),
+            gridDelegate: MobileUi.phoneKpiGridDelegate(
+              spacing: AppSpacing.sm,
+              mainAxisExtent: staffKpiGridExtent(context),
+            ),
             children: [
               for (final item in stats)
                 _StaffOverviewStatTile(item: item, cardColor: cardColor),
@@ -1266,10 +1356,7 @@ class _StaffTaskOverviewSection extends StatelessWidget {
 }
 
 class _StaffOverviewStatTile extends StatelessWidget {
-  const _StaffOverviewStatTile({
-    required this.item,
-    required this.cardColor,
-  });
+  const _StaffOverviewStatTile({required this.item, required this.cardColor});
 
   final _StatTile item;
   final Color cardColor;
@@ -1280,74 +1367,38 @@ class _StaffOverviewStatTile extends StatelessWidget {
     final accent = item.status != null
         ? WmsTaskStatusBadge.foregroundFor(item.status!, context)
         : colors.primary;
-    final bg = item.status != null
-        ? WmsTaskStatusBadge.backgroundFor(item.status!, context)
-        : colors.primaryMuted;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        border: Border.all(color: colors.border.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(WmsIconSizes.iconCardPadding),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            ),
-            child: Icon(item.icon, size: WmsIconSizes.kpi, color: accent),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              item.value,
-              style: WmsDesignTokens.kpiValue(
-                context,
-                width: MediaQuery.sizeOf(context).width,
-              ).copyWith(color: accent),
-            ),
-          ),
-          Text(
-            item.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.kpiLabel(context),
-          ),
-        ],
-      ),
+    // Same tile as the statistics grid, so the two task sections read as one
+    // system rather than two similar-but-different card styles.
+    return WmsMetricCard(
+      icon: item.icon,
+      color: accent,
+      value: item.value,
+      label: item.label,
+      emphasizeValue: true,
+      compact: true,
     );
   }
 }
 
 class _StaffInsightCard extends StatelessWidget {
-  const _StaffInsightCard({
-    required this.insight,
-    required this.cardColor,
-  });
+  const _StaffInsightCard({required this.insight, required this.cardColor});
 
   final DashboardInsight insight;
   final Color cardColor;
 
-  Color _colorFor(String severity) {
+  Color _colorFor(String severity, WmsUiColors colors) {
     return switch (severity.toLowerCase()) {
-      'critical' || 'error' => AppColors.error,
-      'warning' => AppColors.warning,
-      _ => AppColors.info,
+      'critical' || 'error' => colors.error,
+      'warning' => colors.warning,
+      _ => colors.info,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final color = _colorFor(insight.severity);
+    final color = _colorFor(insight.severity, colors);
 
     return AppCard(
       elevated: true,
@@ -1366,9 +1417,9 @@ class _StaffInsightCard extends StatelessWidget {
           Flexible(
             child: Text(
               insight.message,
-              style: WmsDesignTokens.body(context).copyWith(
-                color: colors.textPrimary,
-              ),
+              style: WmsDesignTokens.body(
+                context,
+              ).copyWith(color: colors.textPrimary),
             ),
           ),
         ],
@@ -1411,20 +1462,10 @@ class _StaffNotificationCard extends StatelessWidget {
                 ),
               ),
               if (!notification.read)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.infoLight,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'UNREAD',
-                    style: WmsDesignTokens.supportingDense(context).copyWith(
-                      color: AppColors.info,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
+                WmsToneBadge(
+                  label: 'Unread',
+                  color: colors.info,
+                  compact: true,
                 ),
             ],
           ),
@@ -1433,16 +1474,16 @@ class _StaffNotificationCard extends StatelessWidget {
             notification.message,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.supporting(context).copyWith(
-              color: colors.textSecondary,
-            ),
+            style: WmsDesignTokens.supporting(
+              context,
+            ).copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             WmsFormatters.relativeTime(notification.createdAt),
-            style: WmsDesignTokens.supportingDense(context).copyWith(
-              color: colors.textTertiary,
-            ),
+            style: WmsDesignTokens.supportingDense(
+              context,
+            ).copyWith(color: colors.textTertiary),
           ),
         ],
       ),
@@ -1461,47 +1502,51 @@ class _StaffAuditTimelineTile extends StatelessWidget {
 
   ({IconData icon, Color color, Color background}) _presentationFor(
     String action,
+    WmsUiColors colors,
   ) {
     final lower = action.toLowerCase();
     if (lower.contains('creat')) {
       return (
         icon: Icons.add_circle_outline,
-        color: AppColors.primary,
-        background: AppColors.primaryLight,
+        color: colors.primary,
+        background: colors.primaryMuted,
       );
     }
     if (lower.contains('start')) {
       return (
         icon: Icons.play_circle_outline,
-        color: AppColors.info,
-        background: AppColors.infoLight,
+        color: colors.info,
+        background: colors.infoMuted,
       );
     }
     if (lower.contains('receiv') || lower.contains('inbound')) {
       return (
         icon: Icons.move_to_inbox_outlined,
-        color: AppColors.success,
-        background: AppColors.successLight,
+        color: colors.success,
+        background: colors.successMuted,
       );
     }
     if (lower.contains('status') || lower.contains('change')) {
       return (
         icon: Icons.change_circle_outlined,
-        color: AppColors.warning,
-        background: AppColors.warningLight,
+        color: colors.warning,
+        background: colors.warningMuted,
       );
     }
     return (
       icon: Icons.history,
-      color: AppColors.accent,
-      background: AppColors.accentLight,
+      color: colors.accent,
+      background: colors.accentMuted,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final presentation = _presentationFor(activity.action);
+    final presentation = _presentationFor(
+      activity.action,
+      WmsUiColors.of(context),
+    );
     const iconSize = 32.0;
 
     return Row(
@@ -1556,15 +1601,15 @@ class _StaffAuditTimelineTile extends StatelessWidget {
                 activity.userName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: WmsDesignTokens.supporting(context).copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: WmsDesignTokens.supporting(
+                  context,
+                ).copyWith(color: colors.textSecondary),
               ),
               Text(
                 WmsFormatters.relativeTime(activity.occurredAt),
-                style: WmsDesignTokens.supportingDense(context).copyWith(
-                  color: colors.textTertiary,
-                ),
+                style: WmsDesignTokens.supportingDense(
+                  context,
+                ).copyWith(color: colors.textTertiary),
               ),
             ],
           ),
@@ -1601,10 +1646,9 @@ class _StaffOrderCard extends StatelessWidget {
         children: [
           Text(
             order.orderNumber,
-            style: WmsDesignTokens.body(context).copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.w700,
-            ),
+            style: WmsDesignTokens.body(
+              context,
+            ).copyWith(color: colors.primary, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           _StaffPerfMetaRow(label: 'Customer', value: order.customerName),
@@ -1645,10 +1689,7 @@ class _StaffRecentActivityList extends StatelessWidget {
 
     return AppCard(
       elevated: true,
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.md,
-        horizontal: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       backgroundColor: cardColor,
       child: SizedBox(
         height: 300,
@@ -1673,6 +1714,15 @@ class _StaffRecentActivityList extends StatelessWidget {
   }
 }
 
+/// Task-statistics tile.
+///
+/// Built on [WmsMetricCard] — the same tile the Supervisor control centre
+/// uses — so the three portals share one KPI grammar. It also removes this
+/// grid's overflow at the root: the old hand-rolled column stacked a 66dp icon
+/// well, a 26dp number and a two-line label into a fixed 148dp row (~170dp of
+/// content), and grew further with the user's text scale. [WmsMetricCard]
+/// shrinks its badge first and scales the whole stack as a last resort, so it
+/// cannot overflow at any scale.
 class _StaffStatCard extends StatelessWidget {
   const _StaffStatCard({
     required this.item,
@@ -1692,50 +1742,16 @@ class _StaffStatCard extends StatelessWidget {
     final accent = item.status != null
         ? WmsTaskStatusBadge.foregroundFor(item.status!, context)
         : colors.primary;
-    final bg = item.status != null
-        ? WmsTaskStatusBadge.backgroundFor(item.status!, context)
-        : colors.primaryMuted;
 
-    return AppCard(
-      elevated: true,
+    return WmsMetricCard(
+      icon: item.icon,
+      color: accent,
+      value: item.value,
+      label: item.label,
       onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      backgroundColor: cardColor,
-      borderColor: isSelected ? accent : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(WmsIconSizes.iconCardPadding),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            ),
-            child: Icon(item.icon, size: WmsIconSizes.kpi, color: accent),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              item.value,
-              maxLines: 1,
-              style: WmsDesignTokens.kpiValue(
-                context,
-                width: MediaQuery.sizeOf(context).width,
-              ).copyWith(color: accent),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            item.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.kpiLabel(context),
-          ),
-        ],
-      ),
+      emphasizeValue: true,
+      highlighted: isSelected,
+      compact: true,
     );
   }
 }
@@ -1800,9 +1816,9 @@ class StaffActiveTaskCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   task.title,
-                  style: WmsDesignTokens.cardTitle(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: WmsDesignTokens.cardTitle(
+                    context,
+                  ).copyWith(color: colors.textPrimary),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -1815,20 +1831,14 @@ class StaffActiveTaskCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           if (task.productName != null)
-            _StaffTaskMeta(
-              label: 'Product',
-              value: task.productName!,
-            ),
+            _StaffTaskMeta(label: 'Product', value: task.productName!),
           if (task.quantity != null)
             _StaffTaskMeta(
               label: 'Quantity',
               value: WmsFormatters.quantity(task.quantity),
             ),
           if (task.warehouseName != null)
-            _StaffTaskMeta(
-              label: 'Warehouse',
-              value: task.warehouseName!,
-            ),
+            _StaffTaskMeta(label: 'Warehouse', value: task.warehouseName!),
           if (task.dueDate != null)
             _StaffTaskMeta(
               label: 'Due Date',
@@ -1878,44 +1888,12 @@ class _StaffTaskMeta extends StatelessWidget {
   final bool highlight;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = WmsUiColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            flex: 2,
-            child: Text(
-              label,
-              style: WmsDesignTokens.supporting(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          Flexible(
-            flex: 3,
-            child: Text(
-              value,
-              style: WmsDesignTokens.body(context).copyWith(
-                color: highlight ? colors.error : colors.textPrimary,
-                fontWeight: highlight ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      StaffMetaRow(label: label, value: value, highlight: highlight);
 }
 
 class StaffWarehouseCard extends StatelessWidget {
-  const StaffWarehouseCard({
-    super.key,
-    required this.stat,
-    this.cardColor,
-  });
+  const StaffWarehouseCard({super.key, required this.stat, this.cardColor});
 
   final WarehouseStat stat;
   final Color? cardColor;
@@ -1935,14 +1913,18 @@ class StaffWarehouseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.warehouse_outlined, size: WmsIconSizes.listLeading, color: colors.primary),
+              Icon(
+                Icons.warehouse_outlined,
+                size: WmsIconSizes.listLeading,
+                color: colors.primary,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Flexible(
                 child: Text(
                   stat.name,
-                  style: WmsDesignTokens.cardTitle(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: WmsDesignTokens.cardTitle(
+                    context,
+                  ).copyWith(color: colors.textPrimary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1952,9 +1934,9 @@ class StaffWarehouseCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '${WmsFormatters.quantity(stat.totalUnits)} units',
-            style: WmsDesignTokens.body(context).copyWith(
-              color: colors.textSecondary,
-            ),
+            style: WmsDesignTokens.body(
+              context,
+            ).copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -1965,9 +1947,9 @@ class StaffWarehouseCard extends StatelessWidget {
                   'Capacity used',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: WmsDesignTokens.supporting(context).copyWith(
-                    color: colors.textSecondary,
-                  ),
+                  style: WmsDesignTokens.supporting(
+                    context,
+                  ).copyWith(color: colors.textSecondary),
                 ),
               ),
               Text(
@@ -1987,10 +1969,10 @@ class StaffWarehouseCard extends StatelessWidget {
               minHeight: 8,
               backgroundColor: colors.border,
               color: utilization >= 90
-                  ? AppColors.error
+                  ? colors.error
                   : utilization >= 75
-                      ? AppColors.warning
-                      : AppColors.success,
+                  ? colors.warning
+                  : colors.success,
             ),
           ),
         ],
@@ -2000,7 +1982,9 @@ class StaffWarehouseCard extends StatelessWidget {
 }
 
 /// Recent activity filtered to operational movement types.
-List<WmsTimelineEntry> buildStaffOperationsActivityFeed(StaffDashboardData data) {
+List<WmsTimelineEntry> buildStaffOperationsActivityFeed(
+  StaffDashboardData data,
+) {
   final items = <({DateTime? time, WmsTimelineEntry entry})>[];
 
   for (final m in data.movements) {
@@ -2011,11 +1995,11 @@ List<WmsTimelineEntry> buildStaffOperationsActivityFeed(StaffDashboardData data)
       time: m.timestamp,
       entry: WmsTimelineEntry(
         title: title,
-        description: '${m.productName} · ${WmsFormatters.quantity(m.quantity)} units',
+        description:
+            '${m.productName} · ${WmsFormatters.quantity(m.quantity)} units',
         relativeTime: WmsFormatters.relativeTime(m.timestamp),
         icon: _movementIcon(type),
-        iconColor: _movementColor(type),
-        iconBackground: _movementBackground(type),
+        tone: _movementTone(type),
       ),
     ));
   }
@@ -2030,8 +2014,7 @@ List<WmsTimelineEntry> buildStaffOperationsActivityFeed(StaffDashboardData data)
         description: t.title,
         relativeTime: WmsFormatters.relativeTime(time),
         icon: Icons.fact_check_outlined,
-        iconColor: AppColors.accent,
-        iconBackground: AppColors.accentLight,
+        tone: WmsTimelineTone.accent,
       ),
     ));
   }
@@ -2055,33 +2038,26 @@ bool _isOperationalMovement(String type) =>
     type == 'ADJUSTMENT';
 
 String _movementTitle(String type) => switch (type) {
-      'INBOUND' => 'Receive',
-      'OUTBOUND' => 'Dispatch',
-      'TRANSFER' => 'Transfer',
-      'ADJUSTMENT' => 'Stock Count',
-      _ => type,
-    };
+  'INBOUND' => 'Receive',
+  'OUTBOUND' => 'Dispatch',
+  'TRANSFER' => 'Transfer',
+  'ADJUSTMENT' => 'Stock Count',
+  _ => type,
+};
 
 IconData _movementIcon(String type) => switch (type) {
-      'INBOUND' => Icons.move_to_inbox_outlined,
-      'OUTBOUND' => Icons.local_shipping_outlined,
-      'TRANSFER' => Icons.swap_horiz_rounded,
-      _ => Icons.fact_check_outlined,
-    };
+  'INBOUND' => Icons.move_to_inbox_outlined,
+  'OUTBOUND' => Icons.local_shipping_outlined,
+  'TRANSFER' => Icons.swap_horiz_rounded,
+  _ => Icons.fact_check_outlined,
+};
 
-Color _movementColor(String type) => switch (type) {
-      'INBOUND' => AppColors.success,
-      'OUTBOUND' => const Color(0xFFC2410C),
-      'TRANSFER' => AppColors.info,
-      _ => AppColors.accent,
-    };
-
-Color _movementBackground(String type) => switch (type) {
-      'INBOUND' => AppColors.successLight,
-      'OUTBOUND' => const Color(0xFFFFEDD5),
-      'TRANSFER' => AppColors.infoLight,
-      _ => AppColors.accentLight,
-    };
+WmsTimelineTone _movementTone(String type) => switch (type) {
+  'INBOUND' => WmsTimelineTone.success,
+  'OUTBOUND' => WmsTimelineTone.outbound,
+  'TRANSFER' => WmsTimelineTone.info,
+  _ => WmsTimelineTone.accent,
+};
 
 bool _isCountTask(WarehouseTask task) =>
     task.taskType == WmsTaskTypes.inventoryCount || task.taskType == 'Audit';

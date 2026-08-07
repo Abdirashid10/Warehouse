@@ -114,12 +114,16 @@ class WmsTaskPriorityBadge extends StatelessWidget {
     }
   }
 
-  static String labelFor(String priority) =>
-      priority.isEmpty ? priority : priority[0].toUpperCase() + priority.substring(1);
+  static String labelFor(String priority) => priority.isEmpty
+      ? priority
+      : priority[0].toUpperCase() + priority.substring(1);
 
   @override
   Widget build(BuildContext context) {
-    final palette = WmsBadgeColors.taskPriority(WmsUiColors.of(context), priority);
+    final palette = WmsBadgeColors.taskPriority(
+      WmsUiColors.of(context),
+      priority,
+    );
     return _BadgeChip(
       label: labelFor(priority),
       background: palette.bg,
@@ -285,7 +289,11 @@ class _BadgeChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: compact ? WmsIconSizes.status - 4 : WmsIconSizes.status, color: foreground),
+            Icon(
+              icon,
+              size: compact ? WmsIconSizes.status - 4 : WmsIconSizes.status,
+              color: foreground,
+            ),
             SizedBox(width: compact ? 3 : 4),
           ],
           Text(
@@ -294,13 +302,49 @@ class _BadgeChip extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             softWrap: false,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                  fontSize: compact ? 10 : 12,
-                ),
+              color: foreground,
+              fontWeight: FontWeight.w600,
+              fontSize: compact ? 10 : 12,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Generic status chip for states with no domain badge of their own — Unread,
+/// Draft, Syncing.
+///
+/// Exists so one-off chips stop being hand-rolled `Container`s with their own
+/// radius and padding: every badge in the app now resolves to the same
+/// [_BadgeChip] geometry, with a soft tint and high-contrast ink.
+class WmsToneBadge extends StatelessWidget {
+  const WmsToneBadge({
+    super.key,
+    required this.label,
+    required this.color,
+    this.icon,
+    this.compact = false,
+  });
+
+  final String label;
+
+  /// Semantic colour; the fill is derived from it as a soft tint.
+  final Color color;
+  final IconData? icon;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = WmsUiColors.of(context).isDark;
+
+    return _BadgeChip(
+      label: label,
+      icon: icon,
+      compact: compact,
+      foreground: color,
+      background: color.withValues(alpha: isDark ? 0.18 : 0.12),
     );
   }
 }

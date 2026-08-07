@@ -4,7 +4,7 @@ import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
-import 'package:logisticsmobile/core/utils/mobile_ui.dart';
+import 'package:logisticsmobile/widgets/wms/wms_metric_pill.dart';
 import 'package:logisticsmobile/core/utils/task_workflow_utils.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
 import 'package:logisticsmobile/features/tasks/domain/entities/warehouse_task.dart';
@@ -159,36 +159,32 @@ class TasksKpiStrip extends StatelessWidget {
       ),
     ];
 
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = MobileUi.kpiColumns(width);
-    final tileHeight = MobileUi.kpiTileHeight(width);
+    final colors = WmsUiColors.of(context);
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        crossAxisSpacing: AppSpacing.sm,
-        mainAxisSpacing: AppSpacing.sm,
-        mainAxisExtent: tileHeight,
-      ),
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final isSelected =
-            item.filterKey != null && selectedFilter == item.filterKey;
-        return _KpiCard(
-          item: item,
-          isSelected: isSelected,
-          onTap: () {
-            if (item.filterKey == null) {
-              onFilterTap(null);
-            } else {
-              onFilterTap(isSelected ? null : item.filterKey);
-            }
-          },
-        );
-      },
+    // Seven tall cards in a two-column grid ran four rows — roughly 600dp
+    // before the first task. The same seven now scroll in one ~78dp strip.
+    return WmsMetricPillBar(
+      // The hosting list already applies the screen inset.
+      padding: EdgeInsets.zero,
+      metrics: [
+        for (final item in items)
+          () {
+            final isSelected =
+                item.filterKey != null && selectedFilter == item.filterKey;
+            return WmsMetricPillData(
+              label: item.label,
+              value: item.value,
+              icon: item.icon,
+              color: item.status == null
+                  ? colors.primary
+                  : WmsTaskStatusBadge.foregroundFor(item.status!, context),
+              selected: isSelected,
+              onTap: () => onFilterTap(
+                item.filterKey == null || isSelected ? null : item.filterKey,
+              ),
+            );
+          }(),
+      ],
     );
   }
 }
@@ -207,95 +203,6 @@ class _KpiDef {
   final IconData icon;
   final String? status;
   final String? filterKey;
-}
-
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.item,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final _KpiDef item;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = WmsUiColors.of(context);
-    final accent = item.status != null
-        ? WmsTaskStatusBadge.foregroundFor(item.status!, context)
-        : colors.primary;
-    final bg = item.status != null
-        ? WmsTaskStatusBadge.backgroundFor(item.status!, context)
-        : colors.primaryMuted;
-
-    return Material(
-      color: colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        side: BorderSide(
-          color: isSelected ? accent : colors.border,
-          width: isSelected ? 1.5 : 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Icon(
-                  item.icon,
-                  size: WmsIconSizes.listLeading,
-                  color: accent,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.label.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          WmsDesignTokens.supportingDense(context).copyWith(
-                        color: colors.textTertiary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: WmsDesignTokens.body(context).copyWith(
-                        color: accent,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class TasksSearchPanel extends StatelessWidget {
@@ -616,6 +523,12 @@ class TaskEnterpriseCard extends StatelessWidget {
       isManager: isManager,
     );
 
+    // The first workflow action is the one the operator almost always wants.
+    // It gets a real button; everything else tucks into the overflow menu
+    // rather than wrapping five chips across two or three rows.
+    final primary = cardActions.isEmpty ? null : cardActions.first;
+    final secondary = cardActions.skip(1).toList();
+
     return Material(
       color: colors.surface,
       shape: RoundedRectangleBorder(
@@ -626,145 +539,172 @@ class TaskEnterpriseCard extends StatelessWidget {
         onTap: onView,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 4,
-                    height: 48,
+                    width: 3.5,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: accent,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
+                  // Title only. Packing the type and priority in here as well
+                  // left too little room at 320dp once the status badge and
+                  // overflow menu had taken theirs, and the priority badge
+                  // cannot shrink.
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          style: WmsDesignTokens.body(context).copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 17,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          task.taskType,
-                          style: WmsDesignTokens.supporting(context).copyWith(
-                            color: colors.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      task.title,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: WmsDesignTokens.body(context).copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        height: 1.25,
+                      ),
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      WmsTaskStatusBadge(
-                        status: displayStatus,
-                        compact: true,
-                        useFullLabel: true,
-                      ),
-                      const SizedBox(height: 4),
-                      WmsTaskPriorityBadge(
-                        priority: task.priority,
-                        compact: true,
-                      ),
-                    ],
+                  const SizedBox(width: AppSpacing.sm),
+                  WmsTaskStatusBadge(status: displayStatus, compact: true),
+                  _TaskActionsMenu(
+                    actions: secondary,
+                    isManager: isManager,
+                    onView: onView,
+                    onEdit: onEdit,
+                    onReassign: onReassign,
+                    onAction: onAction,
+                    iconForAction: _iconForAction,
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
+              Divider(
+                height: 1,
+                thickness: 0.8,
+                color: colors.border.withValues(alpha: 0.6),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              // Type and priority get their own full-width line, where the
+              // badge always has room.
+              Row(
+                children: [
+                  WmsTaskPriorityBadge(priority: task.priority, compact: true),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      task.taskType,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: WmsDesignTokens.supportingDense(context).copyWith(
+                        color: colors.textSecondary,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Icons carry the meaning, so the "Product:" / "Warehouse:"
+              // prefixes are gone — they cost a third of each line.
               if (task.productName != null)
                 _MetaRow(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Product',
                   value: task.productName!,
                 ),
               if (task.warehouseName != null)
                 _MetaRow(
                   icon: Icons.warehouse_outlined,
-                  label: 'Warehouse',
                   value: task.warehouseName!,
                 ),
               if (task.assignedToName != null)
                 _MetaRow(
                   icon: Icons.person_outline,
-                  label: 'Assigned Staff',
                   value: task.assignedToName!,
                 ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  if (task.dueDate != null)
-                    Expanded(
-                      child: _DateChip(
-                        icon: task.isOverdue
-                            ? Icons.event_busy_outlined
-                            : Icons.event_outlined,
-                        label: 'Due',
-                        value: WmsFormatters.relativeTime(task.dueDate),
-                        highlight: task.isOverdue,
-                      ),
-                    ),
-                  if (task.dueDate != null && task.createdAt != null)
-                    const SizedBox(width: AppSpacing.sm),
-                  if (task.createdAt != null)
-                    Expanded(
-                      child: _DateChip(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Created',
-                        value: WmsFormatters.relativeTime(task.createdAt),
-                      ),
-                    ),
-                ],
-              ),
-              if (cardActions.isNotEmpty ||
-                  isManager ||
-                  displayStatus == WmsTaskStatuses.completed) ...[
-                const SizedBox(height: AppSpacing.md),
-                const Divider(height: 1),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
+              if (task.dueDate != null || task.createdAt != null) ...[
+                const SizedBox(height: 5),
+                Row(
                   children: [
-                    if (displayStatus == WmsTaskStatuses.completed ||
-                        cardActions.isEmpty)
-                      _ActionChip(
-                        icon: Icons.visibility_outlined,
-                        label: 'View Details',
-                        onTap: onView,
-                      )
-                    else
-                      for (final action in cardActions)
-                        _ActionChip(
-                          icon: _iconForAction(action),
-                          label: action.label,
-                          destructive: action.destructive,
-                          onTap: () => onAction(action),
+                    if (task.dueDate != null)
+                      Flexible(
+                        child: _InlineDate(
+                          icon: task.isOverdue
+                              ? Icons.event_busy_outlined
+                              : Icons.event_outlined,
+                          label: 'Due',
+                          value: WmsFormatters.relativeTime(task.dueDate),
+                          highlight: task.isOverdue,
                         ),
-                    if (isManager) ...[
-                      _ActionChip(
-                        icon: Icons.swap_horiz,
-                        label: 'Reassign',
-                        onTap: onReassign,
                       ),
-                      _ActionChip(
-                        icon: Icons.edit_outlined,
-                        label: 'Edit',
-                        onTap: onEdit,
+                    if (task.dueDate != null && task.createdAt != null)
+                      const SizedBox(width: AppSpacing.md),
+                    if (task.createdAt != null)
+                      Flexible(
+                        child: _InlineDate(
+                          icon: Icons.calendar_today_outlined,
+                          label: 'Created',
+                          value: WmsFormatters.relativeTime(task.createdAt),
+                        ),
                       ),
-                    ],
                   ],
+                ),
+              ],
+              if (primary != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 38,
+                  child: FilledButton(
+                    onPressed: () => onAction(primary),
+                    style: FilledButton.styleFrom(
+                      backgroundColor:
+                          primary.destructive ? colors.error : colors.primary,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMd),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _iconForAction(primary),
+                          size: 17,
+                          color: const Color(0xFFFFFFFF),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            primary.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: WmsDesignTokens.supportingDense(context)
+                                .copyWith(
+                              // Explicit white — the themed label color
+                              // would otherwise beat foregroundColor.
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -787,41 +727,31 @@ class TaskEnterpriseCard extends StatelessWidget {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _MetaRow({required this.icon, required this.value});
 
   final IconData icon;
-  final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Row(
         children: [
-          Icon(icon, size: WmsIconSizes.status, color: colors.textTertiary),
+          Icon(icon, size: 14, color: colors.textTertiary),
           const SizedBox(width: 6),
-          Text(
-            '$label: ',
-            style: WmsDesignTokens.supportingDense(context).copyWith(
-              color: colors.textTertiary,
-              fontSize: 12,
-            ),
-          ),
           Expanded(
             child: Text(
               value,
               maxLines: 1,
+              softWrap: false,
               overflow: TextOverflow.ellipsis,
-              style: WmsDesignTokens.supporting(context).copyWith(
+              style: WmsDesignTokens.supportingDense(context).copyWith(
                 color: colors.textSecondary,
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 12.5,
+                height: 1.25,
               ),
             ),
           ),
@@ -831,8 +761,9 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
-class _DateChip extends StatelessWidget {
-  const _DateChip({
+/// Compact inline date — icon, label and relative value on one line.
+class _InlineDate extends StatelessWidget {
+  const _InlineDate({
     required this.icon,
     required this.label,
     required this.value,
@@ -847,89 +778,115 @@ class _DateChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final fg = highlight ? colors.error : colors.textSecondary;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        border: Border.all(
-          color: highlight ? colors.error.withValues(alpha: 0.3) : colors.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: WmsIconSizes.status, color: fg),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              '$label $value',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WmsDesignTokens.supportingDense(context).copyWith(
-                color: fg,
-                fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 12,
-              ),
+    final tone = highlight ? colors.error : colors.textSecondary;
+
+    // Returns a plain Row — Flexible must be applied by the parent Row at the
+    // call site, since a ParentDataWidget has to be a direct child of its Flex.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: tone),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            '$label $value',
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: WmsDesignTokens.supportingDense(context).copyWith(
+              color: tone,
+              fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 11.5,
+              height: 1.2,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.destructive = false,
+/// Overflow menu holding every action except the primary one.
+class _TaskActionsMenu extends StatelessWidget {
+  const _TaskActionsMenu({
+    required this.actions,
+    required this.isManager,
+    required this.onView,
+    required this.onEdit,
+    required this.onReassign,
+    required this.onAction,
+    required this.iconForAction,
   });
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool destructive;
+  final List<TaskWorkflowAction> actions;
+  final bool isManager;
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onReassign;
+  final void Function(TaskWorkflowAction action) onAction;
+  final IconData Function(TaskWorkflowAction action) iconForAction;
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final fg = destructive ? colors.error : colors.textSecondary;
-    return Material(
-      color: colors.surfaceElevated,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        side: BorderSide(
-          color: destructive
-              ? colors.error.withValues(alpha: 0.3)
-              : colors.border,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: WmsIconSizes.status, color: fg),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: WmsDesignTokens.supportingDense(context).copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+
+    return PopupMenuButton<VoidCallback>(
+      onSelected: (action) => action(),
+      tooltip: 'Task actions',
+      position: PopupMenuPosition.under,
+      icon: Icon(Icons.more_vert_rounded, size: 20, color: colors.textSecondary),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 190),
+      splashRadius: 20,
+      itemBuilder: (context) => [
+        _item(context, Icons.visibility_outlined, 'View details', onView),
+        for (final action in actions)
+          _item(
+            context,
+            iconForAction(action),
+            action.label,
+            () => onAction(action),
+            destructive: action.destructive,
           ),
-        ),
+        if (isManager) ...[
+          const PopupMenuDivider(height: 1),
+          _item(context, Icons.swap_horiz_rounded, 'Reassign', onReassign),
+          _item(context, Icons.edit_outlined, 'Edit task', onEdit),
+        ],
+      ],
+    );
+  }
+
+  PopupMenuItem<VoidCallback> _item(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback action, {
+    bool destructive = false,
+  }) {
+    final colors = WmsUiColors.of(context);
+    final color = destructive ? colors.error : colors.textPrimary;
+
+    return PopupMenuItem<VoidCallback>(
+      value: action,
+      height: 44,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: WmsDesignTokens.body(context).copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

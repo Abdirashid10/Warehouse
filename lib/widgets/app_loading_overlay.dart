@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/widgets/loading_indicator.dart';
 
@@ -32,7 +32,7 @@ class AppLoadingOverlay extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                 child: Center(
                   child: Material(
-                    color: AppColors.surface,
+                    color: WmsUiColors.of(context).surface,
                     elevation: 8,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     child: Padding(

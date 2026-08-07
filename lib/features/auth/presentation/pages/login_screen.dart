@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/config/api_config.dart';
 import 'package:logisticsmobile/core/constants/app_constants.dart';
@@ -48,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
           (previous.errorMessage != current.errorMessage &&
@@ -62,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ..showSnackBar(
               SnackBar(
                 content: Text(text),
-                backgroundColor: AppColors.error,
+                backgroundColor: colors.error,
                 duration: const Duration(seconds: 10),
               ),
             );
@@ -422,6 +424,7 @@ class _LoginFormLayout extends StatelessWidget {
 class _CompactLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Container(
       width: 72,
       height: 72,
@@ -430,7 +433,7 @@ class _CompactLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: colors.primary.withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),

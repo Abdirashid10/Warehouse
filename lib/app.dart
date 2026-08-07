@@ -34,6 +34,11 @@ class LogisticsApp extends StatelessWidget {
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               themeMode: themeState.themeMode,
+              // Explicit rather than inherited: every surface reads its colour
+              // from ThemeData, so interpolating the theme is what makes a
+              // mode switch fade instead of cutting.
+              themeAnimationDuration: const Duration(milliseconds: 220),
+              themeAnimationCurve: Curves.easeOutCubic,
               routerConfig: dependencies.router,
               builder: (context, child) {
                 final clamped = MobileUi.clampMediaQuery(MediaQuery.of(context));

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -272,7 +271,7 @@ class WmsErrorState extends StatelessWidget {
       case WmsErrorKind.apiFailure:
         return wms.error;
       case WmsErrorKind.sessionExpired:
-        return AppColors.info;
+        return wms.info;
       case WmsErrorKind.permissionDenied:
         return wms.error;
     }

@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logisticsmobile/core/di/staff_repositories.dart';
 import 'package:logisticsmobile/core/di/staff_scope_init_mixin.dart';
 import 'package:logisticsmobile/core/presentation/resource_state.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/features/stock_operations/domain/entities/stock_movement.dart';
@@ -88,14 +87,15 @@ class _StockMovementsScreenState extends State<StockMovementsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final cubit = _cubit;
     if (cubit == null) {
       final fallbackData = _buildFallbackData();
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: colors.background,
         appBar: AppBar(
           title: const Text('Stock Movements'),
-          backgroundColor: AppColors.background,
+          backgroundColor: colors.background,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
         ),
@@ -156,10 +156,10 @@ class _StockMovementsScreenState extends State<StockMovementsScreen>
             final displayData = _buildFallbackData();
 
             return Scaffold(
-              backgroundColor: AppColors.background,
+              backgroundColor: colors.background,
               appBar: AppBar(
                 title: const Text('Stock Movements'),
-                backgroundColor: AppColors.background,
+                backgroundColor: colors.background,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
               ),

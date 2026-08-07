@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/constants/wms/task_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/wms_theme_extension.dart';
@@ -56,6 +56,7 @@ class WmsTodaySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final wms = context.wms;
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -99,15 +100,15 @@ class WmsTodaySummary extends StatelessWidget {
               vertical: 4,
             ),
             decoration: BoxDecoration(
-              color: AppColors.errorLight,
+              color: colors.errorMuted,
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    size: WmsIconSizes.status, color: AppColors.error),
+                Icon(Icons.warning_amber_rounded,
+                    size: WmsIconSizes.status, color: colors.error),
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(
                   child: Text(
@@ -115,7 +116,7 @@ class WmsTodaySummary extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.error,
+                          color: colors.error,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -138,8 +139,8 @@ class WmsTodaySummary extends StatelessWidget {
                     label: useShortLabels ? 'Pending' : 'Pending Tasks',
                     count: pending,
                     icon: Icons.schedule_outlined,
-                    color: AppColors.warning,
-                    background: AppColors.warningLight,
+                    color: colors.warning,
+                    background: colors.warningMuted,
                     premium: premium,
                   ),
                 ),
@@ -149,9 +150,9 @@ class WmsTodaySummary extends StatelessWidget {
                     label: useShortLabels ? 'Active' : 'In Progress',
                     count: inProgress,
                     icon: Icons.play_circle_outline,
-                    color: premium ? AppColors.info : primary,
+                    color: premium ? colors.info : primary,
                     background:
-                        premium ? AppColors.infoLight : AppColors.primaryLight,
+                        premium ? colors.infoMuted : colors.primaryMuted,
                     premium: premium,
                   ),
                 ),
@@ -161,8 +162,8 @@ class WmsTodaySummary extends StatelessWidget {
                     label: useShortLabels ? 'Done' : 'Completed',
                     count: completed,
                     icon: Icons.check_circle_outline,
-                    color: AppColors.success,
-                    background: AppColors.successLight,
+                    color: colors.success,
+                    background: colors.successMuted,
                     premium: premium,
                   ),
                 ),

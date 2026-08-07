@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
@@ -211,105 +211,114 @@ class ControlCenterOperationalAlerts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final chips = [
       _AlertChipData(
         'Out Of Stock',
         outOfStock,
-        AppColors.error,
-        AppColors.errorLight,
+        colors.error,
         Icons.remove_shopping_cart_outlined,
       ),
       _AlertChipData(
         'Low Stock',
         lowStock,
-        AppColors.warning,
-        AppColors.warningLight,
+        colors.warning,
         Icons.trending_down_rounded,
       ),
       _AlertChipData(
         'Expired',
         expired,
-        AppColors.expired,
-        AppColors.expiredLight,
+        colors.expired,
         Icons.event_busy_outlined,
       ),
       _AlertChipData(
         'Expiring Soon',
         expiringSoon,
-        AppColors.accent,
-        AppColors.accentLight,
+        colors.accent,
         Icons.schedule_rounded,
       ),
       _AlertChipData(
         'Pending Orders',
         pendingOrders,
-        AppColors.primary,
-        AppColors.primaryLight,
+        colors.primary,
         Icons.shopping_cart_outlined,
       ),
       _AlertChipData(
         'Urgent Tasks',
         urgentTasks,
-        AppColors.error,
-        AppColors.errorLight,
+        colors.error,
         Icons.access_time_filled,
       ),
     ];
 
+    final compact =
+        MobileUi.isCompactPhone(MediaQuery.sizeOf(context).width);
+
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Operational Alerts',
       wrapInCard: false,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth;
-          const gridSpacing = AppSpacing.md;
+      child: _MetricCardGrid(
+        forceSingleColumn: forceSingleColumn,
+        cards: [
+          for (final chip in chips)
+            _OperationalAlertTile(data: chip, onTap: onTap, compact: compact),
+        ],
+      ),
+    );
+  }
+}
 
-          if (!forceSingleColumn && maxWidth < 600) {
-            return GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: MobileUi.phoneKpiGridDelegate(
-                mainAxisExtent: MobileUi.kpiGridMainAxisExtentFor(maxWidth),
-              ),
-              children: [
-                for (final chip in chips)
-                  _OperationalAlertTile(data: chip, onTap: onTap, compact: true),
-              ],
-            );
-          }
+/// Responsive metric grid — 1-up when forced, 2-up on phones, 3-up on tablets.
+///
+/// Every tile is given an identical fixed height so metric values, labels and
+/// status pills stay baseline-aligned across a row, the way they do on the web
+/// dashboard. Tile widths are floored to whole pixels so sub-pixel rounding can
+/// never push the last column onto a new run.
+class _MetricCardGrid extends StatelessWidget {
+  const _MetricCardGrid({
+    required this.cards,
+    this.forceSingleColumn = false,
+  });
 
-          final columns = forceSingleColumn
-              ? 1
-              : (MobileUi.isTablet(maxWidth) ? 3 : 2);
+  final List<Widget> cards;
+  final bool forceSingleColumn;
 
-          if (columns == 1) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < chips.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.md),
-                  _OperationalAlertTile(data: chips[i], onTap: onTap),
-                ],
-              ],
-            );
-          }
+  static const double _spacing = AppSpacing.md;
+  static const double _extent = WmsPremiumMetricCard.gridExtent;
 
-          final tileWidth = (maxWidth - gridSpacing * (columns - 1)) / columns;
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
 
-          return Wrap(
-            spacing: gridSpacing,
-            runSpacing: gridSpacing,
+        if (forceSingleColumn || !maxWidth.isFinite) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (var i = 0; i < chips.length; i++)
-                SizedBox(
-                  width: tileWidth,
-                  child: _OperationalAlertTile(data: chips[i], onTap: onTap),
-                ),
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(height: _spacing),
+                SizedBox(height: _extent, child: cards[i]),
+              ],
             ],
           );
-        },
-      ),
+        }
+
+        final columns = MobileUi.isTablet(maxWidth) ? 3 : 2;
+        final tileWidth =
+            ((maxWidth - _spacing * (columns - 1)) / columns).floorToDouble();
+
+        return Wrap(
+          spacing: _spacing,
+          runSpacing: _spacing,
+          children: [
+            for (final card in cards)
+              SizedBox(width: tileWidth, height: _extent, child: card),
+          ],
+        );
+      },
     );
   }
 }
@@ -319,13 +328,11 @@ class _AlertChipData {
     this.label,
     this.count,
     this.color,
-    this.tint,
     this.icon,
   );
   final String label;
   final int count;
   final Color color;
-  final Color tint;
   final IconData icon;
 }
 
@@ -342,96 +349,23 @@ class _OperationalAlertTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final hasAlert = data.count > 0;
 
-    return AppCard(
-      elevated: true,
+    // In a centered layout the metric number already carries the count, so the
+    // old top-right counter chip was pure duplication. It is replaced by a
+    // status pill that says something the number does not.
+    return WmsMetricCard(
+      icon: data.icon,
+      color: data.color,
+      value: data.count > 999 ? '999+' : '${data.count}',
+      label: data.label,
+      status: hasAlert ? 'Attention' : 'Clear',
+      statusColor: hasAlert ? data.color : colors.success,
+      emphasizeValue: true,
+      highlighted: hasAlert,
+      compact: compact,
       onTap: onTap,
-      padding: WmsPremiumMetricCard.cardPadding,
-      borderColor: hasAlert
-          ? data.color.withValues(alpha: 0.22)
-          : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              WmsPremiumIconBadge(
-                icon: data.icon,
-                color: data.color,
-                size: compact ? 38 : WmsPremiumMetricCard.badgeSize,
-                iconSize: compact ? 18 : WmsPremiumMetricCard.badgeIconSize,
-              ),
-              const Spacer(),
-              _StatusCountBadge(
-                count: data.count,
-                color: data.color,
-                tint: data.tint,
-              ),
-            ],
-          ),
-          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${data.count}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WmsDesignTokens.operationalAlertCount(
-                context,
-                color: data.color,
-                fontSize: compact ? 22 : WmsPremiumMetricCard.metricFontSize,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            data.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.kpiLabel(context).copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Compact rounded counter chip used on alert / KPI cards.
-class _StatusCountBadge extends StatelessWidget {
-  const _StatusCountBadge({
-    required this.count,
-    required this.color,
-    required this.tint,
-  });
-
-  final int count;
-  final Color color;
-  final Color tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: tint,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        border: Border.all(color: color.withValues(alpha: 0.16)),
-      ),
-      child: Text(
-        count > 99 ? '99+' : '$count',
-        style: WmsDesignTokens.supportingDense(context).copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-              height: 1,
-            ),
-      ),
     );
   }
 }
@@ -450,6 +384,7 @@ class ControlCenterExpiryTracking extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final expiredFromList = alerts.critical;
     final expiringSoon = alerts.expiringCount;
     final expired = alerts.expiredCount;
@@ -459,18 +394,18 @@ class ControlCenterExpiryTracking extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ExpiryStatRow(label: 'Expired', count: expired, color: AppColors.error),
+        _ExpiryStatRow(label: 'Expired', count: expired, color: colors.error),
         _ExpiryStatRow(
           label: 'Expiring Soon',
           count: expiringSoon,
-          color: AppColors.warning,
+          color: colors.warning,
         ),
         _ExpiryStatRow(
           label: 'Expiring (30D)',
           count: expiringSoon,
-          color: AppColors.accent,
+          color: colors.accent,
         ),
-        _ExpiryStatRow(label: 'Safe', count: safe, color: AppColors.success),
+        _ExpiryStatRow(label: 'Safe', count: safe, color: colors.success),
       ],
     );
 
@@ -511,13 +446,13 @@ class ControlCenterExpiryTracking extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppColors.errorLight,
+                      color: colors.errorMuted,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                     child: Icon(
                       Icons.event_busy_outlined,
                       size: WmsIconSizes.status,
-                      color: AppColors.error,
+                      color: colors.error,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -537,7 +472,7 @@ class ControlCenterExpiryTracking extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: colors.surfaceElevated,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                     child: Text(
@@ -552,6 +487,7 @@ class ControlCenterExpiryTracking extends StatelessWidget {
     );
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Expiry Tracking',
       actionLabel: onViewAll != null ? 'View all' : null,
       onAction: onViewAll,
@@ -648,9 +584,7 @@ class ControlCenterInventoryOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = MediaQuery.sizeOf(context).width;
-    final mobileGrid = !forceSingleColumn && MobileUi.isMobileGrid(maxWidth);
-
+    final colors = WmsUiColors.of(context);
     Widget kpiCard({
       required String label,
       required String value,
@@ -659,7 +593,7 @@ class ControlCenterInventoryOverview extends StatelessWidget {
       required Color color,
       String? badge,
     }) {
-      final card = _OverviewKpiCard(
+      return _OverviewKpiCard(
         label: label,
         value: value,
         subtitle: subtitle,
@@ -668,7 +602,6 @@ class ControlCenterInventoryOverview extends StatelessWidget {
         badge: badge,
         onTap: onTap,
       );
-      return card;
     }
 
     final cards = [
@@ -677,21 +610,21 @@ class ControlCenterInventoryOverview extends StatelessWidget {
         value: WmsFormatters.quantity(unitsOnHand),
         subtitle: 'Total quantity',
         icon: Icons.inventory_2_outlined,
-        color: AppColors.primary,
+        color: colors.primary,
       ),
       kpiCard(
         label: 'In Stock Lines',
         value: '$inStockLines',
         subtitle: 'Above threshold',
         icon: Icons.check_circle_outline,
-        color: AppColors.success,
+        color: colors.success,
       ),
       kpiCard(
         label: 'Low Stock',
         value: '$lowStock',
         subtitle: 'At or below minimum',
         icon: Icons.warning_amber_rounded,
-        color: AppColors.warning,
+        color: colors.warning,
         badge: lowStock > 0 ? 'Needs attention' : null,
       ),
       kpiCard(
@@ -699,7 +632,7 @@ class ControlCenterInventoryOverview extends StatelessWidget {
         value: '$outOfStock',
         subtitle: 'Zero quantity',
         icon: Icons.remove_shopping_cart_outlined,
-        color: AppColors.error,
+        color: colors.error,
         badge: outOfStock > 0 ? 'Critical' : null,
       ),
       kpiCard(
@@ -707,48 +640,18 @@ class ControlCenterInventoryOverview extends StatelessWidget {
         value: WmsFormatters.currency(stockValue),
         subtitle: 'Σ qty × cost',
         icon: Icons.trending_up_rounded,
-        color: AppColors.accent,
+        color: colors.accent,
       ),
     ];
 
-    if (mobileGrid) {
-      return WmsDashboardSection(
-        title: 'Inventory Overview',
-        wrapInCard: false,
-        child: GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: MobileUi.phoneKpiGridDelegate(
-            mainAxisExtent: MobileUi.kpiGridMainAxisExtentDetailed,
-          ),
-          children: cards,
-        ),
-      );
-    }
-
-    final singleColumn = forceSingleColumn;
-    final children = cards;
-    final grid = singleColumn
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const SizedBox(height: AppSpacing.sm),
-                children[i],
-              ],
-            ],
-          )
-        : Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: children,
-          );
-
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Inventory Overview',
       wrapInCard: false,
-      child: grid,
+      child: _MetricCardGrid(
+        forceSingleColumn: forceSingleColumn,
+        cards: cards,
+      ),
     );
   }
 }
@@ -774,87 +677,17 @@ class _OverviewKpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      elevated: true,
+    // The status pill takes the footer line when present, so every card in a
+    // row keeps the same number of lines and stays baseline-aligned.
+    return WmsMetricCard(
+      icon: icon,
+      color: color,
+      value: value,
+      label: label,
+      subtitle: subtitle,
+      status: badge,
+      highlighted: badge != null,
       onTap: onTap,
-      padding: WmsPremiumMetricCard.cardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              WmsPremiumIconBadge(
-                icon: icon,
-                color: color,
-                size: WmsPremiumMetricCard.badgeSize,
-                iconSize: WmsPremiumMetricCard.badgeIconSize,
-              ),
-              const Spacer(),
-              if (badge != null)
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                      border: Border.all(
-                        color: color.withValues(alpha: 0.18),
-                      ),
-                    ),
-                    child: Text(
-                      badge!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: WmsDesignTokens.supportingDense(context).copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 10,
-                            height: 1.1,
-                          ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: WmsPremiumMetricCard.iconToMetricGap),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: WmsDesignTokens.kpiValue(context).copyWith(
-                fontSize: WmsPremiumMetricCard.metricFontSize,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
-                height: 1.1,
-              ),
-            ),
-          ),
-          const SizedBox(height: WmsPremiumMetricCard.metricToLabelGap),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.kpiLabel(context).copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.supportingDense(context),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -877,87 +710,44 @@ class ControlCenterOperationsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = MediaQuery.sizeOf(context).width;
-    final mobileGrid = !forceSingleColumn && MobileUi.isMobileGrid(maxWidth);
-
-    Widget operationCard(_OverviewKpiCard card) => card;
-
-    final children = [
-      operationCard(
-        _OverviewKpiCard(
-          label: 'Active Warehouses',
-          value: '$activeWarehouses',
-          subtitle: 'Holding stock',
-          icon: Icons.warehouse_outlined,
-          color: AppColors.primary,
-        ),
-      ),
-      operationCard(
-        _OverviewKpiCard(
-          label: "Today's Movements",
-          value: '$todayMovements',
-          subtitle: 'Since midnight',
-          icon: Icons.show_chart_rounded,
-          color: AppColors.info,
-        ),
-      ),
-      operationCard(
-        _OverviewKpiCard(
-          label: 'Total Orders',
-          value: '$totalOrders',
-          subtitle: 'Pipeline',
-          icon: Icons.shopping_cart_outlined,
-          color: AppColors.accent,
-        ),
-      ),
-      operationCard(
-        _OverviewKpiCard(
-          label: 'Delivered',
-          value: '$delivered',
-          subtitle: 'Completed',
-          icon: Icons.local_shipping_outlined,
-          color: AppColors.success,
-        ),
-      ),
-    ];
-
-    if (mobileGrid) {
-      return WmsDashboardSection(
-        title: 'Operations',
-        wrapInCard: false,
-        child: GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: MobileUi.phoneKpiGridDelegate(
-            mainAxisExtent: MobileUi.kpiGridMainAxisExtentDetailed,
-          ),
-          children: children,
-        ),
-      );
-    }
-
-    final singleColumn = forceSingleColumn;
-    final grid = singleColumn
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const SizedBox(height: AppSpacing.sm),
-                children[i],
-              ],
-            ],
-          )
-        : Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: children,
-          );
-
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Operations',
       wrapInCard: false,
-      child: grid,
+      child: _MetricCardGrid(
+        forceSingleColumn: forceSingleColumn,
+        cards: [
+          _OverviewKpiCard(
+            label: 'Active Warehouses',
+            value: '$activeWarehouses',
+            subtitle: 'Holding stock',
+            icon: Icons.warehouse_outlined,
+            color: colors.primary,
+          ),
+          _OverviewKpiCard(
+            label: "Today's Movements",
+            value: '$todayMovements',
+            subtitle: 'Since midnight',
+            icon: Icons.show_chart_rounded,
+            color: colors.info,
+          ),
+          _OverviewKpiCard(
+            label: 'Total Orders',
+            value: '$totalOrders',
+            subtitle: 'Pipeline',
+            icon: Icons.shopping_cart_outlined,
+            color: colors.accent,
+          ),
+          _OverviewKpiCard(
+            label: 'Delivered',
+            value: '$delivered',
+            subtitle: 'Completed',
+            icon: Icons.local_shipping_outlined,
+            color: colors.success,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1021,6 +811,7 @@ class ControlCenterOrderAnalytics extends StatelessWidget {
     );
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Order Analytics',
       showAccentBorder: false,
       child: Column(
@@ -1041,18 +832,19 @@ class _OrdersByStatusChart extends StatelessWidget {
 
   final List<ControlCenterOrderStatus> statusCounts;
 
-  Color _colorFor(String label) {
+  Color _colorFor(String label, WmsUiColors colors) {
     final lower = label.toLowerCase();
     if (lower.contains('pending')) return AppThemeColors.lightTextSecondary;
-    if (lower.contains('process')) return AppColors.info;
+    if (lower.contains('process')) return colors.info;
     if (lower.contains('pack')) return const Color(0xFF7C3AED);
-    if (lower.contains('ship')) return AppColors.accent;
-    if (lower.contains('deliver')) return AppColors.success;
-    return AppColors.primary;
+    if (lower.contains('ship')) return colors.accent;
+    if (lower.contains('deliver')) return colors.success;
+    return colors.primary;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final display = statusCounts.where((s) => s.count > 0).toList();
     if (display.isEmpty) {
       return const Center(
@@ -1107,7 +899,7 @@ class _OrdersByStatusChart extends StatelessWidget {
                   toY: statusCounts[i].count.toDouble(),
                   width: 14,
                   borderRadius: BorderRadius.circular(4),
-                  color: _colorFor(statusCounts[i].label),
+                  color: _colorFor(statusCounts[i].label, colors),
                 ),
               ],
             ),
@@ -1209,6 +1001,7 @@ class ControlCenterOrdersByStatusSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Orders By Status',
       showAccentBorder: false,
       child: Column(
@@ -1244,6 +1037,7 @@ class ControlCenterOrderCreationTrendSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Order Creation Trend',
       showAccentBorder: false,
       child: Column(
@@ -1277,6 +1071,7 @@ class ControlCenterStockMovementTrendSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Stock Movement Summary',
       showAccentBorder: false,
       child: Column(
@@ -1313,9 +1108,11 @@ class ControlCenterInventoryHealthSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final total = (inStock + lowStock + outOfStock + expired).clamp(1, 999999);
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Inventory Health',
       showAccentBorder: false,
       child: Column(
@@ -1336,22 +1133,22 @@ class ControlCenterInventoryHealthSection extends StatelessWidget {
                   if (inStock > 0)
                     Expanded(
                       flex: inStock,
-                      child: const ColoredBox(color: AppColors.success),
+                      child: ColoredBox(color: colors.success),
                     ),
                   if (lowStock > 0)
                     Expanded(
                       flex: lowStock,
-                      child: const ColoredBox(color: AppColors.warning),
+                      child: ColoredBox(color: colors.warning),
                     ),
                   if (outOfStock > 0)
                     Expanded(
                       flex: outOfStock,
-                      child: const ColoredBox(color: AppColors.error),
+                      child: ColoredBox(color: colors.error),
                     ),
                   if (expired > 0)
                     Expanded(
                       flex: expired,
-                      child: const ColoredBox(color: AppColors.expired),
+                      child: ColoredBox(color: colors.expired),
                     ),
                 ],
               ),
@@ -1362,28 +1159,28 @@ class ControlCenterInventoryHealthSection extends StatelessWidget {
             label: 'In Stock',
             count: inStock,
             percent: inStock / total,
-            color: AppColors.success,
+            color: colors.success,
           ),
           const SizedBox(height: AppSpacing.sm),
           _InventoryHealthStatRow(
             label: 'Low Stock',
             count: lowStock,
             percent: lowStock / total,
-            color: AppColors.warning,
+            color: colors.warning,
           ),
           const SizedBox(height: AppSpacing.sm),
           _InventoryHealthStatRow(
             label: 'Out Of Stock',
             count: outOfStock,
             percent: outOfStock / total,
-            color: AppColors.error,
+            color: colors.error,
           ),
           const SizedBox(height: AppSpacing.sm),
           _InventoryHealthStatRow(
             label: 'Expired',
             count: expired,
             percent: expired / total,
-            color: AppColors.expired,
+            color: colors.expired,
           ),
           const SizedBox(height: AppSpacing.md),
           InventoryDistributionDonut(
@@ -1466,6 +1263,7 @@ class ControlCenterWarehousePerformance extends StatelessWidget {
     if (warehouses.isEmpty) return const SizedBox.shrink();
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Warehouse Performance',
       count: warehouses.length,
       actionLabel: onManage != null ? 'Manage →' : null,
@@ -1506,12 +1304,13 @@ class _WarehousePerfCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final util = warehouse.utilizationPercent ?? 0;
     final color = util >= 85
-        ? AppColors.error
+        ? colors.error
         : util >= 60
-            ? AppColors.warning
-            : AppColors.success;
+            ? colors.warning
+            : colors.success;
     final status = util >= 85
         ? 'High Load'
         : util >= 60
@@ -1619,6 +1418,7 @@ class ControlCenterTaskOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final chips = [
       _TaskStatChip(label: 'Total', value: tasks.total),
       _TaskStatChip(label: 'Awaiting', value: tasks.pending),
@@ -1626,10 +1426,11 @@ class ControlCenterTaskOverview extends StatelessWidget {
       _TaskStatChip(label: 'In Progress', value: tasks.inProgress),
       _TaskStatChip(label: 'Completed', value: tasks.completed),
       _TaskStatChip(label: 'Rejected', value: 0),
-      _TaskStatChip(label: 'Overdue', value: overdue, color: AppColors.error),
+      _TaskStatChip(label: 'Overdue', value: overdue, color: colors.error),
     ];
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Task Overview',
       actionLabel: onViewAll != null ? 'All tasks' : null,
       onAction: onViewAll,
@@ -1662,7 +1463,8 @@ class _TaskStatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.primary;
+    final colors = WmsUiColors.of(context);
+    final c = color ?? colors.primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -1700,6 +1502,7 @@ class ControlCenterSmartInsights extends StatelessWidget {
     if (insights.isEmpty) return const SizedBox.shrink();
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Smart Insights',
       showAccentBorder: false,
       child: Column(
@@ -1721,17 +1524,18 @@ class _InsightRow extends StatelessWidget {
 
   final DashboardInsight insight;
 
-  Color _colorFor(String severity) {
+  Color _colorFor(String severity, WmsUiColors colors) {
     return switch (severity.toLowerCase()) {
-      'critical' || 'error' => AppColors.error,
-      'warning' => AppColors.warning,
-      _ => AppColors.info,
+      'critical' || 'error' => colors.error,
+      'warning' => colors.warning,
+      _ => colors.info,
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(insight.severity);
+    final colors = WmsUiColors.of(context);
+    final color = _colorFor(insight.severity, colors);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1766,6 +1570,7 @@ class ControlCenterRecentNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Recent Notifications',
       actionLabel: onViewAll != null ? 'View all' : null,
       onAction: onViewAll,
@@ -1798,6 +1603,7 @@ class _NotificationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1815,16 +1621,16 @@ class _NotificationRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.infoLight,
+                  color: colors.infoMuted,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   border: Border.all(
-                    color: AppColors.info.withValues(alpha: 0.18),
+                    color: colors.info.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Text(
                   'UNREAD',
                   style: WmsDesignTokens.supportingDense(context).copyWith(
-                        color: AppColors.info,
+                        color: colors.info,
                         fontWeight: FontWeight.w700,
                         fontSize: 10,
                       ),
@@ -1860,6 +1666,7 @@ class ControlCenterRecentAudit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Recent Audit Activity',
       actionLabel: onViewAll != null ? 'View all' : null,
       onAction: onViewAll,
@@ -1922,7 +1729,9 @@ class ControlCenterRecentOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Recent Orders',
       actionLabel: onViewAll != null ? 'View all' : null,
       onAction: onViewAll,
@@ -1947,7 +1756,7 @@ class ControlCenterRecentOrders extends StatelessWidget {
                         child: Text(
                           orders[i].orderNumber,
                           style: WmsDesignTokens.body(context).copyWith(
-                            color: AppColors.primary,
+                            color: colors.primary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -2000,6 +1809,7 @@ class ControlCenterRecentActivity extends StatelessWidget {
         .toList();
 
     return WmsDashboardSection(
+      style: WmsSectionStyle.webParity,
       title: 'Recent Activity',
       showAccentBorder: false,
       child: entries.isEmpty

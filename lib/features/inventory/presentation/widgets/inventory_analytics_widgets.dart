@@ -2,14 +2,13 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/utils/mobile_ui.dart';
 import 'package:logisticsmobile/features/inventory/domain/entities/inventory_item.dart';
 import 'package:logisticsmobile/features/inventory/presentation/cubit/inventory_cubit.dart';
 import 'package:logisticsmobile/features/inventory/presentation/utils/inventory_metrics.dart';
-import 'package:logisticsmobile/features/inventory/presentation/widgets/inventory_enterprise_widgets.dart';
 import 'package:logisticsmobile/features/products/domain/entities/product.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
 import 'package:logisticsmobile/widgets/wms/enterprise/wms_dashboard_section.dart';
@@ -33,15 +32,21 @@ class InventoryDistributionDonut extends StatelessWidget {
   final bool compact;
   final bool showLegend;
 
-  static const _segments = [
-    (label: 'In Stock', color: AppColors.success),
-    (label: 'Low Stock', color: AppColors.warning),
-    (label: 'Out Of Stock', color: AppColors.error),
-    (label: 'Expired', color: InventoryUi.expiredPurple),
-  ];
+  /// Segment palette, resolved per brightness.
+  ///
+  /// Was a `static const` list, which pinned the light-mode swatches into
+  /// every theme — a static field has no context to resolve against.
+  static List<({String label, Color color})> _segmentsFor(WmsUiColors colors) =>
+      [
+        (label: 'In Stock', color: colors.success),
+        (label: 'Low Stock', color: colors.warning),
+        (label: 'Out Of Stock', color: colors.error),
+        (label: 'Expired', color: colors.expired),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final values = [
       inStock.toDouble(),
       lowStock.toDouble(),
@@ -61,7 +66,7 @@ class InventoryDistributionDonut extends StatelessWidget {
       sections.add(
         PieChartSectionData(
           value: value,
-          color: _segments[i].color,
+          color: _segmentsFor(colors)[i].color,
           radius: compact ? 42 : 50,
           showTitle: !compact,
           title: compact ? '' : '${((value / total) * 100).round()}%',
@@ -84,13 +89,13 @@ class InventoryDistributionDonut extends StatelessWidget {
     );
 
     final legend = [
-      for (var i = 0; i < _segments.length; i++)
+      for (var i = 0; i < _segmentsFor(colors).length; i++)
         if (values[i] > 0)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: _LegendRow(
-              color: _segments[i].color,
-              label: _segments[i].label,
+              color: _segmentsFor(colors)[i].color,
+              label: _segmentsFor(colors)[i].label,
               value: values[i].toInt(),
             ),
           ),
@@ -168,6 +173,7 @@ class InventoryCategoryChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final series = _categorySeries(_sourceItems, _categoryFor);
     if (series.isEmpty) {
       return const _InventoryChartEmpty(message: 'No category data available');
@@ -225,7 +231,7 @@ class InventoryCategoryChart extends StatelessWidget {
                         toY: display[i].value,
                         width: display.length > 5 ? 12 : 16,
                         borderRadius: BorderRadius.circular(4),
-                        color: _categoryColor(i),
+                        color: _categoryColor(i, colors),
                       ),
                     ],
                   ),
@@ -240,7 +246,7 @@ class InventoryCategoryChart extends StatelessWidget {
           children: [
             for (var i = 0; i < display.length; i++)
               _LegendRow(
-                color: _categoryColor(i),
+                color: _categoryColor(i, colors),
                 label: display[i].key,
                 value: display[i].value.toInt(),
                 compact: true,
@@ -287,18 +293,22 @@ class InventoryCategoryChart extends StatelessWidget {
     return ordered;
   }
 
-  static Color _categoryColor(int index) {
-    const colors = [
-      AppColors.primary,
-      AppColors.info,
-      AppColors.accent,
-      AppColors.success,
-      AppColors.warning,
-      AppColors.error,
-      Color(0xFF7C3AED),
-      Color(0xFF0D9488),
+  /// Categorical colour for a product category slice.
+  ///
+  /// Takes the resolved palette because a `static` helper has no context of
+  /// its own, and the light-mode swatches were previously baked in here.
+  static Color _categoryColor(int index, WmsUiColors colors) {
+    final palette = [
+      colors.primary,
+      colors.info,
+      colors.accent,
+      colors.success,
+      colors.warning,
+      colors.error,
+      colors.expired,
+      const Color(0xFF0D9488),
     ];
-    return colors[index % colors.length];
+    return palette[index % palette.length];
   }
 }
 

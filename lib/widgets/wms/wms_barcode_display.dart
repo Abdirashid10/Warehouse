@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 
 /// Visual barcode representation for SKU display (no external barcode package).
@@ -10,6 +10,7 @@ class WmsBarcodeDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final bars = code.codeUnits.map((u) => (u % 5) + 1).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -20,9 +21,9 @@ class WmsBarcodeDisplay extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: colors.border),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/widgets/wms/wms_shell_navigation_bar.dart';
 
@@ -12,22 +12,21 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
-  bool _isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = _isDarkMode || theme.brightness == Brightness.dark;
-    final background = isDark ? const Color(0xFF0F172A) : AppColors.background;
-    final surface = isDark ? const Color(0xFF111827) : AppColors.surface;
-    final mutedSurface = isDark ? const Color(0xFF1F2937) : AppColors.surfaceVariant;
-    final border = isDark ? Colors.white24 : AppColors.border;
-    final primaryText = isDark ? Colors.white : AppColors.textPrimary;
-    final secondaryText = isDark ? Colors.white70 : AppColors.textSecondary;
+    final colors = WmsUiColors.of(context);
+    final background = colors.background;
+    final surface = colors.surface;
+    final mutedSurface = colors.surfaceElevated;
+    final border = colors.border;
+    final primaryText = colors.textPrimary;
+    final secondaryText = colors.textSecondary;
 
     return Scaffold(
       backgroundColor: background,
-      drawer: _buildDrawer(context, isDark),
+      drawer: _buildDrawer(context),
       appBar: AppBar(
         backgroundColor: background,
         surfaceTintColor: Colors.transparent,
@@ -60,13 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
-            icon: Icon(
-              _isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-              color: primaryText,
-            ),
-          ),
           IconButton(
             onPressed: () {},
             icon: Icon(Icons.notifications_none_rounded, color: primaryText),
@@ -113,54 +105,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   context: context,
                   label: 'Out Of Stock',
                   count: '2',
-                  accent: AppColors.error,
+                  accent: colors.error,
                   icon: Icons.remove_shopping_cart_outlined,
-                  background: AppColors.errorLight,
+                  background: colors.errorMuted,
                   primaryText: primaryText,
                 ),
                 _buildAlertCard(
                   context: context,
                   label: 'Low Stock',
                   count: '9',
-                  accent: AppColors.warning,
+                  accent: colors.warning,
                   icon: Icons.trending_down_rounded,
-                  background: AppColors.warningLight,
+                  background: colors.warningMuted,
                   primaryText: primaryText,
                 ),
                 _buildAlertCard(
                   context: context,
                   label: 'Expired',
                   count: '2',
-                  accent: AppColors.expired,
+                  accent: colors.expired,
                   icon: Icons.event_busy_outlined,
-                  background: AppColors.expiredLight,
+                  background: colors.expiredMuted,
                   primaryText: primaryText,
                 ),
                 _buildAlertCard(
                   context: context,
                   label: 'Expiring Soon',
                   count: '0',
-                  accent: AppColors.info,
+                  accent: colors.info,
                   icon: Icons.schedule_rounded,
-                  background: AppColors.infoLight,
+                  background: colors.infoMuted,
                   primaryText: primaryText,
                 ),
                 _buildAlertCard(
                   context: context,
                   label: 'Pending Orders',
                   count: '1',
-                  accent: AppColors.primary,
+                  accent: colors.primary,
                   icon: Icons.shopping_cart_outlined,
-                  background: AppColors.primaryLight,
+                  background: colors.primaryMuted,
                   primaryText: primaryText,
                 ),
                 _buildAlertCard(
                   context: context,
                   label: 'Urgent Tasks',
                   count: '6',
-                  accent: AppColors.error,
+                  accent: colors.error,
                   icon: Icons.access_time_filled,
-                  background: AppColors.errorLight,
+                  background: colors.errorMuted,
                   primaryText: primaryText,
                 ),
               ],
@@ -210,11 +202,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, bool isDark) {
-    final surface = isDark ? const Color(0xFF111827) : AppColors.surface;
-    final border = isDark ? Colors.white24 : AppColors.border;
-    final primaryText = isDark ? Colors.white : AppColors.textPrimary;
-    final secondaryText = isDark ? Colors.white70 : AppColors.textSecondary;
+  Widget _buildDrawer(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+    final surface = colors.surface;
+    final border = colors.border;
+    final primaryText = colors.textPrimary;
+    final secondaryText = colors.textSecondary;
 
     return Drawer(
       backgroundColor: surface,
@@ -222,7 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: colors.primary.withValues(alpha: 0.1),
               border: Border(bottom: BorderSide(color: border)),
             ),
             child: Column(
@@ -230,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: colors.primary,
                   child: const Icon(Icons.person_rounded, color: Colors.white),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -278,6 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color primaryText,
     required Color secondaryText,
   }) {
+    final colors = WmsUiColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -324,7 +318,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: mutedSurface,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Icon(Icons.refresh_rounded, color: AppColors.primary),
+                child: Icon(Icons.refresh_rounded, color: colors.primary),
               ),
             ],
           ),
@@ -334,17 +328,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.successLight,
+                  color: colors.successMuted,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.sync_rounded, size: 16, color: AppColors.success),
+                    Icon(Icons.sync_rounded, size: 16, color: colors.success),
                     const SizedBox(width: 6),
                     Text(
                       'Synced 2m ago',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.success,
+                        color: colors.success,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -452,6 +446,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color primaryText,
     required Color secondaryText,
   }) {
+    final colors = WmsUiColors.of(context);
     return Column(
       children: [
         Row(
@@ -467,7 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             TextButton(
               onPressed: () {},
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: colors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
               child: const Text('View all'),
@@ -489,14 +484,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildExpiryStat(
                     label: 'Expired',
                     count: '2',
-                    color: AppColors.error,
+                    color: colors.error,
                     context: context,
                   ),
                   const Spacer(),
                   _buildExpiryStat(
                     label: 'Expiring Soon',
                     count: '3',
-                    color: AppColors.warning,
+                    color: colors.warning,
                     context: context,
                   ),
                 ],
@@ -507,14 +502,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildExpiryStat(
                     label: 'Expiring (30D)',
                     count: '5',
-                    color: AppColors.info,
+                    color: colors.info,
                     context: context,
                   ),
                   const Spacer(),
                   _buildExpiryStat(
                     label: 'Safe',
                     count: '48',
-                    color: AppColors.success,
+                    color: colors.success,
                     context: context,
                   ),
                 ],
@@ -524,10 +519,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 borderRadius: BorderRadius.circular(999),
                 child: Row(
                   children: [
-                    Expanded(flex: 2, child: Container(height: 8, color: AppColors.error)),
-                    Expanded(flex: 3, child: Container(height: 8, color: AppColors.warning)),
-                    Expanded(flex: 5, child: Container(height: 8, color: AppColors.info)),
-                    Expanded(flex: 48, child: Container(height: 8, color: AppColors.success)),
+                    Expanded(flex: 2, child: Container(height: 8, color: colors.error)),
+                    Expanded(flex: 3, child: Container(height: 8, color: colors.warning)),
+                    Expanded(flex: 5, child: Container(height: 8, color: colors.info)),
+                    Expanded(flex: 48, child: Container(height: 8, color: colors.success)),
                   ],
                 ),
               ),
@@ -551,6 +546,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
     required BuildContext context,
   }) {
+    final colors = WmsUiColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -564,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
       ],

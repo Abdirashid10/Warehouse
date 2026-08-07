@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/features/dashboard/domain/entities/staff_dashboard_data.dart';
@@ -109,15 +109,25 @@ class DashboardInventoryHealthDonut extends StatelessWidget {
   final int lowStock;
   final int outOfStock;
 
-  static const _segments = [
-    (label: 'In Stock', color: AppColors.success),
-    (label: 'Low Stock', color: AppColors.warning),
-    (label: 'Out Of Stock', color: AppColors.error),
-  ];
+  /// Segment palette, resolved per brightness.
+  ///
+  /// Previously a `static const` list, which forced the light-mode swatches
+  /// into every theme — a static field has no context to resolve against.
+  static List<({String label, Color color})> _segmentsFor(WmsUiColors colors) =>
+      [
+        (label: 'In Stock', color: colors.success),
+        (label: 'Low Stock', color: colors.warning),
+        (label: 'Out Of Stock', color: colors.error),
+      ];
 
   @override
   Widget build(BuildContext context) {
-    final values = [inStock.toDouble(), lowStock.toDouble(), outOfStock.toDouble()];
+    final colors = WmsUiColors.of(context);
+    final values = [
+      inStock.toDouble(),
+      lowStock.toDouble(),
+      outOfStock.toDouble(),
+    ];
     final total = values.fold<double>(0, (sum, value) => sum + value);
 
     if (total <= 0) {
@@ -132,13 +142,12 @@ class DashboardInventoryHealthDonut extends StatelessWidget {
       sections.add(
         PieChartSectionData(
           value: value,
-          color: _segments[i].color,
+          color: _segmentsFor(colors)[i].color,
           radius: 52,
           title: '$pct%',
-          titleStyle: WmsDesignTokens.supportingDense(context).copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          titleStyle: WmsDesignTokens.supportingDense(
+            context,
+          ).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
         ),
       );
     }
@@ -165,12 +174,12 @@ class DashboardInventoryHealthDonut extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (var i = 0; i < _segments.length; i++)
+              for (var i = 0; i < _segmentsFor(colors).length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: _DonutLegendRow(
-                    color: _segments[i].color,
-                    label: _segments[i].label,
+                    color: _segmentsFor(colors)[i].color,
+                    label: _segmentsFor(colors)[i].label,
                     value: values[i].toInt(),
                   ),
                 ),
@@ -218,10 +227,9 @@ class _DonutLegendRow extends StatelessWidget {
               ),
               Text(
                 '$value SKUs',
-                style: WmsDesignTokens.kpiLabel(context).copyWith(
-                  fontSize: 13,
-                  height: 1.2,
-                ),
+                style: WmsDesignTokens.kpiLabel(
+                  context,
+                ).copyWith(fontSize: 13, height: 1.2),
               ),
             ],
           ),
@@ -233,17 +241,16 @@ class _DonutLegendRow extends StatelessWidget {
 
 /// Compact dual-line chart for inbound vs outbound movement.
 class DashboardCompactMovementChart extends StatelessWidget {
-  const DashboardCompactMovementChart({
-    super.key,
-    required this.series,
-  });
+  const DashboardCompactMovementChart({super.key, required this.series});
 
   final DashboardChartTimeSeries series;
 
   @override
   Widget build(BuildContext context) {
     if (!series.hasData) {
-      return const _ChartEmptyState(message: 'No movement data in the last 7 days');
+      return const _ChartEmptyState(
+        message: 'No movement data in the last 7 days',
+      );
     }
 
     final maxY = series.lines.fold<double>(0, (max, line) {
@@ -255,6 +262,7 @@ class DashboardCompactMovementChart extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final colors = WmsUiColors.of(context);
         const legendReserve = 32.0;
         final chartHeight = constraints.maxHeight.isFinite
             ? math.max(80.0, constraints.maxHeight - legendReserve)
@@ -317,7 +325,7 @@ class DashboardCompactMovementChart extends StatelessWidget {
                             FlSpot(i.toDouble(), line.values[i]),
                         ],
                         isCurved: true,
-                        color: line.color,
+                        color: line.resolveColor(colors),
                         barWidth: 2,
                         dotData: const FlDotData(show: false),
                       ),
@@ -339,6 +347,7 @@ class _ChartLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: AppSpacing.xs,
@@ -351,15 +360,12 @@ class _ChartLegend extends StatelessWidget {
                 width: 10,
                 height: 3,
                 decoration: BoxDecoration(
-                  color: line.color,
+                  color: line.resolveColor(colors),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                line.label,
-                style: WmsDesignTokens.supportingDense(context),
-              ),
+              Text(line.label, style: WmsDesignTokens.supportingDense(context)),
             ],
           ),
       ],

@@ -7,18 +7,16 @@ import 'package:logisticsmobile/core/di/staff_scope_init_mixin.dart';
 import 'package:logisticsmobile/core/presentation/resource_state.dart';
 import 'package:logisticsmobile/core/presentation/wms_inventory_refresh_bus.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
-import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
 import 'package:logisticsmobile/core/theme/wms_theme_extension.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
 import 'package:logisticsmobile/features/inventory/domain/entities/inventory_item.dart';
 import 'package:logisticsmobile/features/inventory/domain/usecases/get_inventory_usecase.dart';
 import 'package:logisticsmobile/features/inventory/presentation/cubit/inventory_cubit.dart';
-import 'package:logisticsmobile/features/inventory/presentation/utils/inventory_metrics.dart';
 import 'package:logisticsmobile/features/inventory/presentation/widgets/inventory_enterprise_widgets.dart';
+import 'package:logisticsmobile/features/inventory/presentation/widgets/inventory_mobile_widgets.dart';
 import 'package:logisticsmobile/features/orders/domain/entities/warehouse_order.dart';
 import 'package:logisticsmobile/features/stock_operations/domain/entities/stock_movement.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
-import 'package:logisticsmobile/widgets/wms/enterprise/wms_dashboard_section.dart';
 import 'package:logisticsmobile/widgets/wms/wms_skeleton.dart';
 import 'package:logisticsmobile/widgets/wms/wms_state_views.dart';
 
@@ -101,70 +99,49 @@ class _InventoryScreenState extends State<InventoryScreen>
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
+                // One page header only. The old layout stacked a page title,
+                // three section headers and a separate sort strip above the
+                // first product.
                 const SliverToBoxAdapter(child: InventoryTrackingHeader()),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: InventorySummarySection(data: data),
+                SliverToBoxAdapter(
+                  child: InventoryMetricsBar(
+                    data: data,
+                    onStockFilter: cubit.setStockFilter,
                   ),
                 ),
                 const SliverToBoxAdapter(
-                  child: SizedBox(height: InventoryUi.sectionGap),
+                  child: SizedBox(height: InventoryMobileUi.blockGap),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: WmsDashboardSection(
-                      title: 'Search & Filters',
-                      child: InventoryFilterPanel(
-                        data: data,
-                        searchController: _searchController,
-                        onSearch: cubit.setSearch,
-                        onWarehouse: cubit.setWarehouse,
-                        onCategory: cubit.setCategory,
-                        onStockFilter: cubit.setStockFilter,
-                      ),
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: InventoryUi.sectionGap),
-                ),
-                const SliverPadding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: InventoryOperationsSection(),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.sm),
-                      child: InventorySortBar(
-                        data: data,
-                        onSort: cubit.setSort,
-                      ),
+                    child: InventoryFilterBar(
+                      data: data,
+                      searchController: _searchController,
+                      onSearch: cubit.setSearch,
+                      onWarehouse: cubit.setWarehouse,
+                      onCategory: cubit.setCategory,
+                      onStockFilter: cubit.setStockFilter,
+                      onSort: cubit.setSort,
                     ),
                   ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.screenPadding,
-                    AppSpacing.sm,
+                    AppSpacing.md,
                     AppSpacing.screenPadding,
-                    AppSpacing.xs,
+                    AppSpacing.sm,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: _ProductInventoryListHeader(count: data.filtered.length),
+                    child: InventoryResultsBar(
+                      count: data.filtered.length,
+                      sortField: data.sortField,
+                      sortAscending: data.sortAscending,
+                      onSort: cubit.setSort,
+                    ),
                   ),
                 ),
                 if (data.pageItems.isEmpty)
@@ -188,18 +165,15 @@ class _InventoryScreenState extends State<InventoryScreen>
                           if (index >= data.pageItems.length) return null;
                           final item = data.pageItems[index];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                            child: InventoryProductCard(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: InventoryProductTile(
                               item: item,
-                              category: data.categoryFor(item),
                               lastUpdated: InventoryUi.lastUpdatedFor(
                                 item,
                                 data.movements,
                               ),
                               availableQuantity: data.availableQuantityFor(item),
                               reservedQuantity: data.reservedQuantityFor(item),
-                              damagedQuantity: data.damagedQuantityFor(item),
-                              batchLabel: InventoryMetrics.batchLabel(item),
                               onTap: () => _showInventoryDetails(
                                 context,
                                 data,
@@ -252,53 +226,6 @@ class _InventoryScreenState extends State<InventoryScreen>
           );
         },
       ),
-    );
-  }
-}
-
-class _ProductInventoryListHeader extends StatelessWidget {
-  const _ProductInventoryListHeader({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 3,
-          height: 18,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            'Product Inventory',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: WmsDesignTokens.sectionTitle(context),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: context.wms.primaryLight,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16)),
-          ),
-          child: Text(
-            '$count',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-        ),
-      ],
     );
   }
 }

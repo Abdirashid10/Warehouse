@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/core/constants/wms/stock_constants.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/utils/wms_formatters.dart';
@@ -24,10 +24,11 @@ class WmsInventoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final borderColor = _isOut
-        ? AppColors.error
+        ? colors.error
         : _isLow
-            ? AppColors.warning
+            ? colors.warning
             : null;
 
     return AppCard(
@@ -76,10 +77,10 @@ class WmsInventoryCard extends StatelessWidget {
                   '${WmsFormatters.quantity(item.quantity)} units',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: _isOut
-                            ? AppColors.error
+                            ? colors.error
                             : _isLow
-                                ? AppColors.warning
-                                : AppColors.primary,
+                                ? colors.warning
+                                : colors.primary,
                       ),
                 ),
               ],
@@ -92,13 +93,13 @@ class WmsInventoryCard extends StatelessWidget {
                   Icon(
                     _isOut ? Icons.error_outline : Icons.warning_amber_rounded,
                     size: WmsIconSizes.status,
-                    color: _isOut ? AppColors.error : AppColors.warning,
+                    color: _isOut ? colors.error : colors.warning,
                   ),
                   const SizedBox(width: WmsIconSizes.iconLabelGap),
                   Text(
                     _isOut ? 'Replenishment required' : 'Low stock — review threshold',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: _isOut ? AppColors.error : AppColors.warning,
+                          color: _isOut ? colors.error : colors.warning,
                           fontWeight: FontWeight.w600,
                         ),
                   ),

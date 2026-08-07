@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
-import 'package:logisticsmobile/core/theme/app_theme_colors.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
 import 'package:logisticsmobile/core/theme/wms_design_tokens.dart';
+import 'package:logisticsmobile/core/theme/wms_ui_colors.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
 import 'package:logisticsmobile/widgets/wms/wms_state_views.dart';
+
+/// Semantic role of a timeline entry.
+///
+/// Entries carry a tone rather than a literal colour so the pair is resolved
+/// against the active theme at paint time. Baking colours in at mapping time
+/// meant an entry built under one brightness kept those colours after a theme
+/// switch — light-mode tints stayed on dark surfaces.
+enum WmsTimelineTone {
+  success,
+  info,
+  accent,
+  primary,
+  warning,
+  error,
+  outbound,
+  expired,
+  neutral,
+}
 
 class WmsTimelineEntry {
   const WmsTimelineEntry({
@@ -12,16 +29,56 @@ class WmsTimelineEntry {
     required this.description,
     required this.relativeTime,
     required this.icon,
-    this.iconColor = AppColors.primary,
-    this.iconBackground = AppColors.primaryLight,
+    this.tone = WmsTimelineTone.primary,
+    this.iconColor,
+    this.iconBackground,
   });
 
   final String title;
   final String description;
   final String relativeTime;
   final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
+  final WmsTimelineTone tone;
+
+  /// Explicit override for the glyph colour. Prefer [tone]; this exists for
+  /// callers that genuinely need a one-off colour and are already resolving it
+  /// from the theme themselves.
+  final Color? iconColor;
+
+  /// Explicit override for the well behind the glyph. Prefer [tone].
+  final Color? iconBackground;
+
+  Color resolveIconColor(WmsUiColors colors) =>
+      iconColor ?? _toneInk(tone, colors);
+
+  Color resolveIconBackground(WmsUiColors colors) =>
+      iconBackground ?? _toneFill(tone, colors);
+
+  static Color _toneInk(WmsTimelineTone tone, WmsUiColors colors) =>
+      switch (tone) {
+        WmsTimelineTone.success => colors.success,
+        WmsTimelineTone.info => colors.info,
+        WmsTimelineTone.accent => colors.accent,
+        WmsTimelineTone.primary => colors.primary,
+        WmsTimelineTone.warning => colors.warning,
+        WmsTimelineTone.error => colors.error,
+        WmsTimelineTone.outbound => colors.outbound,
+        WmsTimelineTone.expired => colors.expired,
+        WmsTimelineTone.neutral => colors.textSecondary,
+      };
+
+  static Color _toneFill(WmsTimelineTone tone, WmsUiColors colors) =>
+      switch (tone) {
+        WmsTimelineTone.success => colors.successMuted,
+        WmsTimelineTone.info => colors.infoMuted,
+        WmsTimelineTone.accent => colors.accentMuted,
+        WmsTimelineTone.primary => colors.primaryMuted,
+        WmsTimelineTone.warning => colors.warningMuted,
+        WmsTimelineTone.error => colors.errorMuted,
+        WmsTimelineTone.outbound => colors.warningMuted,
+        WmsTimelineTone.expired => colors.expiredMuted,
+        WmsTimelineTone.neutral => colors.mutedSurface,
+      };
 }
 
 /// Maps audit/action text to timeline presentation.
@@ -33,69 +90,56 @@ abstract final class WmsTimelineMapper {
   }) {
     final lower = action.toLowerCase();
     final IconData icon;
-    final Color color;
-    final Color bg;
+    final WmsTimelineTone tone;
     String title;
 
     if (lower.contains('order') && lower.contains('deliver')) {
       icon = Icons.local_shipping_outlined;
-      color = AppColors.success;
-      bg = AppColors.successLight;
+      tone = WmsTimelineTone.success;
       title = 'Order Delivered';
     } else if (lower.contains('order') && lower.contains('pack')) {
       icon = Icons.inventory_2_outlined;
-      color = AppColors.info;
-      bg = AppColors.infoLight;
+      tone = WmsTimelineTone.info;
       title = 'Order Packed';
     } else if (lower.contains('order')) {
       icon = Icons.shopping_bag_outlined;
-      color = AppColors.accent;
-      bg = AppColors.accentLight;
+      tone = WmsTimelineTone.accent;
       title = 'Order Created';
     } else if (lower.contains('task') && lower.contains('complet')) {
       icon = Icons.task_alt_rounded;
-      color = AppColors.success;
-      bg = AppColors.successLight;
+      tone = WmsTimelineTone.success;
       title = 'Task Completed';
     } else if (lower.contains('transfer')) {
       icon = Icons.swap_horiz_rounded;
-      color = AppColors.info;
-      bg = AppColors.infoLight;
+      tone = WmsTimelineTone.info;
       title = 'Stock Transferred';
     } else if (lower.contains('user') || lower.contains('added')) {
       icon = Icons.person_add_alt_1_outlined;
-      color = AppColors.primary;
-      bg = AppColors.primaryLight;
+      tone = WmsTimelineTone.primary;
       title = 'User Added';
     } else if (lower.contains('inventory') || lower.contains('stock')) {
       icon = Icons.inventory_2_outlined;
-      color = AppColors.primary;
-      bg = AppColors.primaryLight;
+      tone = WmsTimelineTone.primary;
       title = 'Inventory Updated';
     } else if (lower.contains('inbound') || lower.contains('receive')) {
       icon = Icons.download_rounded;
-      color = AppColors.success;
-      bg = AppColors.successLight;
+      tone = WmsTimelineTone.success;
       title = 'Inbound Received';
     } else if (lower.contains('outbound') || lower.contains('dispatch')) {
       icon = Icons.upload_rounded;
-      color = const Color(0xFFC2410C);
-      bg = const Color(0xFFFFEDD5);
+      tone = WmsTimelineTone.outbound;
       title = 'Outbound Dispatched';
     } else if (lower.contains('warehouse')) {
       icon = Icons.warehouse_outlined;
-      color = AppColors.info;
-      bg = AppColors.infoLight;
+      tone = WmsTimelineTone.info;
       title = 'Warehouse Event';
     } else if (lower.contains('alert') || lower.contains('critical')) {
       icon = Icons.warning_amber_rounded;
-      color = AppColors.warning;
-      bg = AppColors.warningLight;
+      tone = WmsTimelineTone.warning;
       title = 'Operations Alert';
     } else {
       icon = Icons.history_rounded;
-      color = AppThemeColors.lightTextSecondary;
-      bg = AppColors.surfaceVariant;
+      tone = WmsTimelineTone.neutral;
       title = _titleFromAction(action);
     }
 
@@ -108,8 +152,7 @@ abstract final class WmsTimelineMapper {
       description: description,
       relativeTime: relativeTime ?? '',
       icon: icon,
-      iconColor: color,
-      iconBackground: bg,
+      tone: tone,
     );
   }
 
@@ -129,33 +172,28 @@ abstract final class WmsTimelineMapper {
   }) {
     final upper = type.toUpperCase();
     IconData icon;
-    Color color;
-    Color bg;
+    WmsTimelineTone tone;
     String title;
 
     switch (upper) {
       case 'INBOUND':
         icon = Icons.download_rounded;
-        color = AppColors.success;
-        bg = AppColors.successLight;
+        tone = WmsTimelineTone.success;
         title = 'Inbound Received';
         break;
       case 'OUTBOUND':
         icon = Icons.upload_rounded;
-        color = const Color(0xFFC2410C);
-        bg = const Color(0xFFFFEDD5);
+        tone = WmsTimelineTone.outbound;
         title = 'Outbound Dispatched';
         break;
       case 'TRANSFER':
         icon = Icons.swap_horiz_rounded;
-        color = AppColors.info;
-        bg = AppColors.infoLight;
+        tone = WmsTimelineTone.info;
         title = 'Stock Transferred';
         break;
       default:
         icon = Icons.inventory_2_outlined;
-        color = AppColors.primary;
-        bg = AppColors.primaryLight;
+        tone = WmsTimelineTone.primary;
         title = 'Inventory Updated';
     }
 
@@ -164,8 +202,7 @@ abstract final class WmsTimelineMapper {
       description: '$productName · $quantityLabel',
       relativeTime: relativeTime,
       icon: icon,
-      iconColor: color,
-      iconBackground: bg,
+      tone: tone,
     );
   }
 }
@@ -310,7 +347,10 @@ class WmsTimelineEntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
     final iconSize = dense ? 32.0 : 40.0;
+    final iconInk = entry.resolveIconColor(colors);
+    final iconWell = entry.resolveIconBackground(colors);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,16 +365,16 @@ class WmsTimelineEntryTile extends StatelessWidget {
                 height: iconSize,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: entry.iconBackground,
+                  color: iconWell,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: concise
                       ? Border.all(
-                          color: entry.iconColor.withValues(alpha: 0.18),
+                          color: iconInk.withValues(alpha: 0.18),
                         )
                       : null,
                 ),
                 child: Icon(entry.icon,
-                    color: entry.iconColor, size: dense ? 16 : 20),
+                    color: iconInk, size: dense ? 16 : 20),
               ),
               if (showConnector)
                 Container(
@@ -342,7 +382,7 @@ class WmsTimelineEntryTile extends StatelessWidget {
                   height: dense ? 20 : 28,
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),
@@ -375,7 +415,7 @@ class WmsTimelineEntryTile extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
+                          color: colors.mutedSurface,
                           borderRadius:
                               BorderRadius.circular(AppSpacing.radiusSm),
                         ),
@@ -384,7 +424,7 @@ class WmsTimelineEntryTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: WmsDesignTokens.supportingDense(context).copyWith(
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                                 fontWeight: FontWeight.w500,
                               ),
                         ),

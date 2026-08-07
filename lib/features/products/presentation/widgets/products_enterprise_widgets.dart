@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:logisticsmobile/core/constants/wms/stock_constants.dart';
 import 'package:logisticsmobile/core/theme/app_spacing.dart';
+import 'package:logisticsmobile/core/theme/wms_badge_colors.dart';
 import 'package:logisticsmobile/core/theme/wms_icon_sizes.dart';
 import 'package:logisticsmobile/core/theme/app_typography.dart';
 import 'package:logisticsmobile/core/utils/mobile_ui.dart';
@@ -13,6 +15,7 @@ import 'package:logisticsmobile/features/products/domain/entities/product_catego
 import 'package:logisticsmobile/features/products/presentation/cubit/products_catalog_cubit.dart';
 import 'package:logisticsmobile/features/products/presentation/widgets/product_form_sheet.dart';
 import 'package:logisticsmobile/widgets/app_card.dart';
+import 'package:logisticsmobile/widgets/wms/wms_metric_pill.dart';
 
 class ProductsEnterpriseHeader extends StatelessWidget {
   const ProductsEnterpriseHeader({
@@ -32,7 +35,11 @@ class ProductsEnterpriseHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.inventory_2_outlined, size: WmsIconSizes.status, color: colors.primary),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: WmsIconSizes.status,
+              color: colors.primary,
+            ),
             const SizedBox(width: WmsIconSizes.iconLabelGap),
             Text(
               'MASTER DATA',
@@ -42,7 +49,11 @@ class ProductsEnterpriseHeader extends StatelessWidget {
                 letterSpacing: 0.6,
               ),
             ),
-            Icon(Icons.chevron_right, size: WmsIconSizes.listLeading, color: colors.textTertiary),
+            Icon(
+              Icons.chevron_right,
+              size: WmsIconSizes.listLeading,
+              color: colors.textTertiary,
+            ),
             Text(
               'PRODUCTS',
               style: WmsDesignTokens.supportingDense(context).copyWith(
@@ -55,18 +66,16 @@ class ProductsEnterpriseHeader extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text(
           'Products',
-          style: WmsDesignTokens.pageTitle(context).copyWith(
-            color: colors.textPrimary,
-          ),
+          style: WmsDesignTokens.pageTitle(
+            context,
+          ).copyWith(color: colors.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Centralized product master data with inventory intelligence and warehouse stock visibility.',
-          style: WmsDesignTokens.body(context).copyWith(
-            color: colors.textSecondary,
-            fontSize: 14,
-            height: 1.5,
-          ),
+          style: WmsDesignTokens.body(
+            context,
+          ).copyWith(color: colors.textSecondary, fontSize: 14, height: 1.5),
         ),
         if (canManage) ...[
           const SizedBox(height: AppSpacing.lg),
@@ -118,8 +127,9 @@ class ProductsEnterpriseKpiStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoriesValue =
-        summary.categories > 0 ? summary.categories : categoryCount;
+    final categoriesValue = summary.categories > 0
+        ? summary.categories
+        : categoryCount;
     final colors = WmsUiColors.of(context);
     final items = [
       _KpiDef(
@@ -362,15 +372,17 @@ class ProductsEnterpriseSearchPanel extends StatelessWidget {
                     vertical: 14,
                   ),
                 ),
-                icon: const Icon(Icons.filter_list, size: WmsIconSizes.actionButton),
+                icon: const Icon(
+                  Icons.filter_list,
+                  size: WmsIconSizes.actionButton,
+                ),
                 label: Text(
                   activeFilterCount > 0
                       ? 'Filters ($activeFilterCount)'
                       : 'Filters',
-                  style: WmsDesignTokens.body(context).copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  style: WmsDesignTokens.body(
+                    context,
+                  ).copyWith(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
               ),
             ),
@@ -379,7 +391,11 @@ class ProductsEnterpriseSearchPanel extends StatelessWidget {
               IconButton(
                 tooltip: 'Clear filters',
                 onPressed: onClearFilters,
-                icon: Icon(Icons.clear, color: colors.textTertiary, size: WmsIconSizes.search),
+                icon: Icon(
+                  Icons.clear,
+                  color: colors.textTertiary,
+                  size: WmsIconSizes.search,
+                ),
               ),
             ],
           ],
@@ -387,10 +403,9 @@ class ProductsEnterpriseSearchPanel extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Text(
           '$displayCount of $totalCount products',
-          style: WmsDesignTokens.supporting(context).copyWith(
-            color: colors.textSecondary,
-            fontSize: 13,
-          ),
+          style: WmsDesignTokens.supporting(
+            context,
+          ).copyWith(color: colors.textSecondary, fontSize: 13),
         ),
       ],
     );
@@ -416,14 +431,17 @@ class _SearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: WmsDesignTokens.body(context).copyWith(
-        color: colors.textPrimary,
-        fontSize: 15,
-      ),
+      style: WmsDesignTokens.body(
+        context,
+      ).copyWith(color: colors.textPrimary, fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: colors.textTertiary, fontSize: 14),
-        prefixIcon: Icon(icon, color: colors.textTertiary, size: WmsIconSizes.search),
+        prefixIcon: Icon(
+          icon,
+          color: colors.textTertiary,
+          size: WmsIconSizes.search,
+        ),
         filled: true,
         fillColor: colors.surfaceElevated,
         contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -501,7 +519,9 @@ class ProductsEnterpriseFiltersPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           _FilterDropdown(
             label: 'Warehouse',
-            value: warehouseFilterId?.isEmpty == true ? null : warehouseFilterId,
+            value: warehouseFilterId?.isEmpty == true
+                ? null
+                : warehouseFilterId,
             items: [
               const DropdownMenuItem<String?>(value: null, child: Text('All')),
               for (final w in warehouses)
@@ -638,11 +658,11 @@ class ProductsEnterpriseCard extends StatelessWidget {
                             product.sku,
                             style: WmsDesignTokens.supportingDense(context)
                                 .copyWith(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'monospace',
-                              fontSize: 14,
-                            ),
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'monospace',
+                                  fontSize: 14,
+                                ),
                           ),
                         ),
                         if (product.category != null) ...[
@@ -660,9 +680,9 @@ class ProductsEnterpriseCard extends StatelessWidget {
                                   product.category!,
                                   style: WmsDesignTokens.supporting(context)
                                       .copyWith(
-                                    color: colors.textSecondary,
-                                    fontSize: 13,
-                                  ),
+                                        color: colors.textSecondary,
+                                        fontSize: 13,
+                                      ),
                                 ),
                               ),
                             ],
@@ -702,10 +722,9 @@ class ProductsEnterpriseCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               Text(
                 'Last updated ${product.updatedAt != null ? WmsFormatters.relativeTime(product.updatedAt) : '—'}',
-                style: WmsDesignTokens.supporting(context).copyWith(
-                  color: colors.textTertiary,
-                  fontSize: 14,
-                ),
+                style: WmsDesignTokens.supporting(
+                  context,
+                ).copyWith(color: colors.textTertiary, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.md),
               const Divider(height: 1),
@@ -799,8 +818,7 @@ class ProductsEnterpriseCardList extends StatelessWidget {
             onEdit: () => onEdit(products[i]),
             onStockHistory: onStockHistory,
             onTransfer: onTransfer,
-            onDelete:
-                onDelete != null ? () => onDelete!(products[i]) : null,
+            onDelete: onDelete != null ? () => onDelete!(products[i]) : null,
           ),
           if (i < products.length - 1) const SizedBox(height: AppSpacing.md),
         ],
@@ -834,8 +852,8 @@ class _StatTile extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: WmsDesignTokens.supportingDense(context).copyWith(
-                        color: colors.textTertiary,
-                        fontSize: 12,
+              color: colors.textTertiary,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
             ),
@@ -952,7 +970,6 @@ class _PlaceholderImage extends StatelessWidget {
   }
 }
 
-
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.icon,
@@ -980,47 +997,59 @@ class _ActionRow extends StatelessWidget {
 }
 
 class ProductEnterpriseStatusBadge extends StatelessWidget {
-  const ProductEnterpriseStatusBadge({super.key, required this.label});
+  const ProductEnterpriseStatusBadge({
+    super.key,
+    required this.label,
+    this.dense = false,
+  });
 
   final String label;
 
-  (Color bg, Color fg) _colorsFor(BuildContext context) {
-    final c = WmsUiColors.of(context);
+  /// Tighter padding and type for use inside the compact product card.
+  final bool dense;
+
+  /// Products spell the empty state `Out Of Stock`; the shared stock-status
+  /// vocabulary uses `Out of Stock`. Normalise so both resolve to one palette.
+  static String _canonical(String label) {
     switch (label) {
-      case 'In Stock':
-        return (const Color(0xFF14532D), c.success);
-      case 'Low Stock':
-        return (const Color(0xFF78350F), c.warning);
       case 'Out Of Stock':
-        return (const Color(0xFF7F1D1D), c.error);
+        return WmsStockStatuses.outOfStock;
       case 'Expiring':
-      case 'Expired':
-        return (const Color(0xFF78350F), const Color(0xFFFBBF24));
+        return WmsStockStatuses.expired;
       default:
-        return (const Color(0xFF334155), c.textSecondary);
+        return label;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = _colorsFor(context);
+    final colors = WmsUiColors.of(context);
+    // Previously this hardcoded dark-theme swatches (a near-black green fill
+    // behind green text), which rendered as an unreadable dark blob on the
+    // light theme. The shared badge palette is theme-aware and matches the
+    // status colors used on the inventory and dashboard screens.
+    final palette = WmsBadgeColors.stockStatus(colors, _canonical(label));
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 7 : 8,
+        vertical: dense ? 2 : 4,
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: WmsDesignTokens.supportingDense(context).copyWith(
-            color: fg,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
+      decoration: BoxDecoration(
+        color: palette.bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: palette.fg.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        style: WmsDesignTokens.supportingDense(context).copyWith(
+          color: palette.fg,
+          fontWeight: FontWeight.w700,
+          fontSize: dense ? 10.5 : 12,
+          height: 1.2,
         ),
       ),
     );
@@ -1104,7 +1133,9 @@ class ProductsEnterpriseDataTable extends StatelessWidget {
                   onEdit: () => onEdit(products[i]),
                   onStockHistory: onStockHistory,
                   onTransfer: onTransfer,
-                  onDelete: onDelete != null ? () => onDelete!(products[i]) : null,
+                  onDelete: onDelete != null
+                      ? () => onDelete!(products[i])
+                      : null,
                 ),
             ],
           ),
@@ -1163,13 +1194,13 @@ class _TableHeaderRow extends StatelessWidget {
                                 col.label,
                                 style: WmsDesignTokens.supportingDense(context)
                                     .copyWith(
-                                  color: sortField == col.sortField
-                                      ? colors.primary
-                                      : colors.textTertiary,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  letterSpacing: 0.5,
-                                ),
+                                      color: sortField == col.sortField
+                                          ? colors.primary
+                                          : colors.textTertiary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      letterSpacing: 0.5,
+                                    ),
                               ),
                             ),
                             if (sortField == col.sortField)
@@ -1191,12 +1222,13 @@ class _TableHeaderRow extends StatelessWidget {
                       ),
                       child: Text(
                         col.label,
-                        style: WmsDesignTokens.supportingDense(context).copyWith(
-                          color: colors.textTertiary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          letterSpacing: 0.5,
-                        ),
+                        style: WmsDesignTokens.supportingDense(context)
+                            .copyWith(
+                              color: colors.textTertiary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              letterSpacing: 0.5,
+                            ),
                       ),
                     ),
             ),
@@ -1260,7 +1292,9 @@ class _TableProductRow extends StatelessWidget {
               SizedBox(
                 width: columns[1].width,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
                   child: Text(
                     product.sku,
                     style: WmsDesignTokens.supportingDense(context).copyWith(
@@ -1316,9 +1350,9 @@ class _TableProductRow extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: WmsDesignTokens.supportingDense(context)
                                     .copyWith(
-                                  color: colors.textSecondary,
-                                  fontSize: 14,
-                                ),
+                                      color: colors.textSecondary,
+                                      fontSize: 14,
+                                    ),
                               ),
                           ],
                         ),
@@ -1331,10 +1365,7 @@ class _TableProductRow extends StatelessWidget {
                 width: columns[3].width,
                 child: product.category != null
                     ? _CategoryPill(label: product.category!)
-                    : Text(
-                        '—',
-                        style: TextStyle(color: colors.textTertiary),
-                      ),
+                    : Text('—', style: TextStyle(color: colors.textTertiary)),
               ),
               SizedBox(
                 width: columns[4].width,
@@ -1373,10 +1404,9 @@ class _TableProductRow extends StatelessWidget {
                     ),
                     Text(
                       '${product.warehouseCount ?? 0} warehouses',
-                      style: WmsDesignTokens.supportingDense(context).copyWith(
-                color: colors.textSecondary,
-                fontSize: 12,
-                      ),
+                      style: WmsDesignTokens.supportingDense(
+                        context,
+                      ).copyWith(color: colors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1393,10 +1423,9 @@ class _TableProductRow extends StatelessWidget {
                   product.updatedAt != null
                       ? WmsFormatters.relativeTime(product.updatedAt)
                       : '—',
-                  style: WmsDesignTokens.supportingDense(context).copyWith(
-                color: colors.textSecondary,
-                fontSize: 12,
-                  ),
+                  style: WmsDesignTokens.supportingDense(
+                    context,
+                  ).copyWith(color: colors.textSecondary, fontSize: 12),
                 ),
               ),
               SizedBox(
@@ -1484,7 +1513,11 @@ class _TableImagePlaceholder extends StatelessWidget {
       width: 36,
       height: 36,
       color: colors.surfaceElevated,
-      child: Icon(Icons.image_outlined, size: WmsIconSizes.listLeading, color: colors.textTertiary),
+      child: Icon(
+        Icons.image_outlined,
+        size: WmsIconSizes.listLeading,
+        color: colors.textTertiary,
+      ),
     );
   }
 }
@@ -1507,7 +1540,11 @@ class _CategoryPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.category_outlined, size: WmsIconSizes.status, color: colors.textSecondary),
+          Icon(
+            Icons.category_outlined,
+            size: WmsIconSizes.status,
+            color: colors.textSecondary,
+          ),
           const SizedBox(width: 4),
           Flexible(
             child: Text(
@@ -1537,14 +1574,16 @@ abstract final class ProductsMobileTypography {
 
   static TextStyle pageTitle(BuildContext context) {
     final narrow = MobileUi.isNarrowPhone(_width(context));
-    return WmsDesignTokens.pageTitle(context).copyWith(
-      fontSize: narrow ? 22 : AppTypography.pageTitleSize,
-    );
+    return WmsDesignTokens.pageTitle(
+      context,
+    ).copyWith(fontSize: narrow ? 22 : AppTypography.pageTitleSize);
   }
 
   static TextStyle sectionTitle(BuildContext context) =>
       WmsDesignTokens.sectionTitle(context).copyWith(
-        fontSize: MobileUi.isNarrowPhone(_width(context)) ? 18 : AppTypography.sectionTitleSize,
+        fontSize: MobileUi.isNarrowPhone(_width(context))
+            ? 18
+            : AppTypography.sectionTitleSize,
       );
 
   static TextStyle cardTitle(BuildContext context) =>
@@ -1552,7 +1591,9 @@ abstract final class ProductsMobileTypography {
 
   static TextStyle kpiNumber(BuildContext context) =>
       WmsDesignTokens.cardNumber(context).copyWith(
-        fontSize: MobileUi.isNarrowPhone(_width(context)) ? 20 : AppTypography.cardNumberSize,
+        fontSize: MobileUi.isNarrowPhone(_width(context))
+            ? 20
+            : AppTypography.cardNumberSize,
       );
 
   static TextStyle body(BuildContext context) => WmsDesignTokens.body(context);
@@ -1579,70 +1620,144 @@ class ProductsMobileHeader extends StatelessWidget {
     final colors = WmsUiColors.of(context);
     final horizontal = MobileUi.screenHorizontalInsetsOf(context);
 
-    return Padding(
-      padding: horizontal.copyWith(
-        top: AppSpacing.sm,
-        bottom: AppSpacing.xs,
+    // Products is a pushed route with no AppBar, so this header *is* the top
+    // chrome: it has to inset itself or the title and Add button sit under the
+    // status bar. Same structure as WmsEnterpriseAppHeader — surface fill that
+    // paints behind the status bar, content inset below it, hairline underneath
+    // — so a pushed screen and a shell tab read identically.
+    return Material(
+      color: colors.surface,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: colors.border)),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: horizontal.copyWith(
+              top: AppSpacing.sm,
+              bottom: AppSpacing.sm,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (onBack != null) ...[
+                  IconButton(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      foregroundColor: colors.textPrimary,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Products',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: ProductsMobileTypography.pageTitle(context)
+                            .copyWith(
+                              fontSize: 22,
+                              height: 1.2,
+                              color: colors.textPrimary,
+                            ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Master data & stock visibility',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: ProductsMobileTypography.caption(
+                          context,
+                        ).copyWith(color: colors.textSecondary, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+                if (canManage) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  _AddProductButton(onAdd: onAdd),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (onBack != null) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back_rounded),
-                style: IconButton.styleFrom(
-                  foregroundColor: colors.textPrimary,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(40, 40),
-                ),
+    );
+  }
+}
+
+/// Primary action for the products header.
+///
+/// Shows label + icon when there is room and collapses to an icon-only square
+/// on narrow phones, so the title never gets squeezed.
+class _AddProductButton extends StatelessWidget {
+  const _AddProductButton({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  static const double _height = 40;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+    final compact = MobileUi.isCompactPhone(MediaQuery.sizeOf(context).width);
+
+    final style = FilledButton.styleFrom(
+      backgroundColor: colors.primary,
+      foregroundColor: const Color(0xFFFFFFFF),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 0 : AppSpacing.md),
+      minimumSize: Size(compact ? _height : 0, _height),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+    );
+
+    if (compact) {
+      return SizedBox(
+        width: _height,
+        height: _height,
+        child: FilledButton(
+          onPressed: onAdd,
+          style: style,
+          child: const Icon(Icons.add_rounded, size: 20),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: _height,
+      child: FilledButton(
+        onPressed: onAdd,
+        style: style,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add_rounded, size: 18),
+            const SizedBox(width: 5),
+            Text(
+              'Add Product',
+              maxLines: 1,
+              softWrap: false,
+              style: ProductsMobileTypography.caption(context).copyWith(
+                // Explicit white: the themed label color would otherwise win.
+                color: const Color(0xFFFFFFFF),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
           ],
-          Text(
-            'Products',
-            maxLines: 2,
-            softWrap: true,
-            style: ProductsMobileTypography.pageTitle(context).copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Centralized product master data with inventory intelligence and warehouse stock visibility.',
-            style: ProductsMobileTypography.body(context).copyWith(
-              color: colors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          if (canManage) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: AppSpacing.buttonHeight,
-              child: FilledButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add, size: WmsIconSizes.actionButton),
-                label: const Text('Add Product'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-                  backgroundColor: colors.primary,
-                  foregroundColor: colors.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  textStyle: ProductsMobileTypography.body(context).copyWith(
-                    color: colors.onPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1682,8 +1797,9 @@ class ProductsMobileKpiGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final categoriesValue =
-        summary.categories > 0 ? summary.categories : categoryCount;
+    final categoriesValue = summary.categories > 0
+        ? summary.categories
+        : categoryCount;
 
     final items = [
       _ProductsMobileKpiDef(
@@ -1726,60 +1842,20 @@ class ProductsMobileKpiGrid extends StatelessWidget {
       ),
     ];
 
-    return Padding(
-      padding: MobileUi.screenHorizontalInsetsOf(context),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = MediaQuery.sizeOf(context).width;
-          final extent = MobileUi.kpiGridMainAxisExtentFor(width);
-
-          return GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: MobileUi.phoneKpiGridDelegate(
-              mainAxisExtent: extent,
-            ),
-            children: [
-              for (final item in items)
-                AppCard(
-                  elevated: true,
-                  onTap: item.onTap,
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(item.icon, size: WmsIconSizes.kpi, color: item.iconColor),
-                      const SizedBox(height: AppSpacing.sm),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          item.value,
-                          maxLines: 1,
-                          style: ProductsMobileTypography.kpiNumber(context)
-                              .copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        item.label,
-                        maxLines: 2,
-                        softWrap: true,
-                        style: ProductsMobileTypography.caption(context).copyWith(
-                          color: colors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+    // Six tall cards in a two-column grid ran three rows deep — around 500dp,
+    // more than a phone screen before any product was visible. The same six
+    // metrics now scroll horizontally in a single ~78dp strip.
+    return WmsMetricPillBar(
+      metrics: [
+        for (final item in items)
+          WmsMetricPillData(
+            label: item.label,
+            value: item.value,
+            icon: item.icon,
+            color: item.iconColor,
+            onTap: item.onTap,
+          ),
+      ],
     );
   }
 }
@@ -1815,95 +1891,122 @@ class ProductsMobileSearchSection extends StatelessWidget {
     final selectedCategory = categoryFilterId;
     final selectedWarehouse = warehouseFilterId;
 
+    final categoryName = _labelFor(selectedCategory, [
+      for (final c in categories) (id: c.id, name: c.name),
+    ]);
+    final warehouseName = _labelFor(selectedWarehouse, [
+      for (final w in warehouses) (id: w.id, name: w.name),
+    ]);
+    final activeCount = [
+      categoryName,
+      warehouseName,
+    ].where((v) => v != null).length;
+
+    // Search and both filter rows collapse into one line. The two chip strips
+    // cost ~76dp permanently even when nothing was filtered; they now live in
+    // a sheet, and only *active* filters take space, as removable chips.
     return Padding(
       padding: MobileUi.screenHorizontalInsetsOf(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: AppSpacing.inputHeight,
-            child: TextField(
-              controller: searchController,
-              onChanged: onSearch,
-              style: ProductsMobileTypography.body(context).copyWith(
-                color: colors.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search SKU, name, barcode...',
-                hintStyle: ProductsMobileTypography.body(context).copyWith(
-                  color: colors.textTertiary,
-                ),
-                prefixIcon: Icon(Icons.search_rounded, color: colors.primary),
-                filled: true,
-                fillColor: colors.surfaceElevated,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(color: colors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(color: colors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(color: colors.primary, width: 1.5),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          Row(
             children: [
-              _ProductsMobileFilterChip(
-                label: 'All',
-                selected:
-                    selectedCategory == null || selectedCategory.isEmpty,
-                onTap: () => onCategory(null),
-              ),
-              for (final category in categories)
-                _ProductsMobileFilterChip(
-                  label: category.name,
-                  selected: selectedCategory == category.id,
-                  onTap: () => onCategory(
-                    selectedCategory == category.id ? null : category.id,
+              Expanded(
+                child: SizedBox(
+                  height: _controlHeight,
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: onSearch,
+                    textInputAction: TextInputAction.search,
+                    style: ProductsMobileTypography.body(
+                      context,
+                    ).copyWith(color: colors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Search SKU, name, barcode',
+                      hintStyle: ProductsMobileTypography.caption(
+                        context,
+                      ).copyWith(color: colors.textTertiary),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: colors.textSecondary,
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      filled: true,
+                      fillColor: colors.surfaceElevated,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 0,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: colors.border.withValues(alpha: 0.8),
+                          width: 0.8,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        borderSide: BorderSide(
+                          color: colors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _ProductsMobileFilterChip(
-                label: 'All',
-                selected:
-                    selectedWarehouse == null || selectedWarehouse.isEmpty,
-                onTap: warehouseFilterLoading ? () {} : () => onWarehouse(null),
               ),
-              for (final warehouse in warehouses)
-                _ProductsMobileFilterChip(
-                  label: warehouse.name,
-                  selected: selectedWarehouse == warehouse.id,
-                  onTap: warehouseFilterLoading
-                      ? () {}
-                      : () => onWarehouse(
-                            selectedWarehouse == warehouse.id
-                                ? null
-                                : warehouse.id,
-                          ),
-                ),
+              const SizedBox(width: AppSpacing.sm),
+              _ProductsFilterButton(
+                activeCount: activeCount,
+                loading: warehouseFilterLoading,
+                onTap: () => _openFilterSheet(context),
+              ),
             ],
           ),
-          if (warehouseFilterLoading) ...[
+          if (activeCount > 0) ...[
             const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 30,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  if (categoryName != null)
+                    _ActiveFilterChip(
+                      label: categoryName,
+                      icon: Icons.category_outlined,
+                      onClear: () => onCategory(null),
+                    ),
+                  if (warehouseName != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _ActiveFilterChip(
+                      label: warehouseName,
+                      icon: Icons.warehouse_outlined,
+                      onClear: () => onWarehouse(null),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          if (warehouseFilterLoading) ...[
+            const SizedBox(height: AppSpacing.xs),
             LinearProgressIndicator(
               color: colors.primary,
               backgroundColor: colors.border,
@@ -1914,40 +2017,347 @@ class ProductsMobileSearchSection extends StatelessWidget {
       ),
     );
   }
+
+  static const double _controlHeight = 44;
+
+  static String? _labelFor(
+    String? id,
+    List<({String id, String name})> options,
+  ) {
+    if (id == null || id.isEmpty) return null;
+    for (final option in options) {
+      if (option.id == id) return option.name;
+    }
+    return null;
+  }
+
+  Future<void> _openFilterSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXl),
+        ),
+      ),
+      builder: (sheetContext) => ProductsFilterSheet(
+        categories: categories,
+        warehouses: warehouses,
+        categoryFilterId: categoryFilterId,
+        warehouseFilterId: warehouseFilterId,
+        onCategory: onCategory,
+        onWarehouse: onWarehouse,
+      ),
+    );
+  }
 }
 
-class _ProductsMobileFilterChip extends StatelessWidget {
-  const _ProductsMobileFilterChip({
-    required this.label,
-    required this.selected,
+class _ProductsFilterButton extends StatelessWidget {
+  const _ProductsFilterButton({
+    required this.activeCount,
     required this.onTap,
+    this.loading = false,
   });
 
-  final String label;
-  final bool selected;
+  final int activeCount;
   final VoidCallback onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    final accent = colors.primary;
+    final active = activeCount > 0;
+    final radius = BorderRadius.circular(AppSpacing.radiusMd);
 
-    return FilterChip(
-      label: Text(
-        label,
-        maxLines: 2,
-        softWrap: true,
-        style: ProductsMobileTypography.body(context).copyWith(
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected ? accent : colors.textSecondary,
+    return Material(
+      color: active
+          ? colors.primary.withValues(alpha: 0.10)
+          : colors.surfaceElevated,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: loading ? null : onTap,
+        child: Container(
+          height: ProductsMobileSearchSection._controlHeight,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: active
+                  ? colors.primary.withValues(alpha: 0.40)
+                  : colors.border.withValues(alpha: 0.8),
+              width: active ? 1.2 : 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.tune_rounded,
+                size: 20,
+                color: active ? colors.primary : colors.textSecondary,
+              ),
+              if (active) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.primary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$activeCount',
+                    style: ProductsMobileTypography.caption(context).copyWith(
+                      color: const Color(0xFFFFFFFF),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      selectedColor: accent.withValues(alpha: 0.12),
-      side: BorderSide(color: selected ? accent : colors.border),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+    );
+  }
+}
+
+class _ActiveFilterChip extends StatelessWidget {
+  const _ActiveFilterChip({
+    required this.label,
+    required this.icon,
+    required this.onClear,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+    final primary = colors.primary;
+
+    return Container(
+      padding: const EdgeInsets.only(left: AppSpacing.sm, right: 2),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: primary.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: primary),
+          const SizedBox(width: 5),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 150),
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: ProductsMobileTypography.caption(context).copyWith(
+                color: primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onClear,
+            icon: Icon(Icons.close_rounded, size: 14, color: primary),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+            tooltip: 'Remove filter',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet holding the category and warehouse filters.
+class ProductsFilterSheet extends StatelessWidget {
+  const ProductsFilterSheet({
+    super.key,
+    required this.categories,
+    required this.warehouses,
+    required this.categoryFilterId,
+    required this.warehouseFilterId,
+    required this.onCategory,
+    required this.onWarehouse,
+  });
+
+  final List<ProductCategory> categories;
+  final List<WarehouseOption> warehouses;
+  final String? categoryFilterId;
+  final String? warehouseFilterId;
+  final ValueChanged<String?> onCategory;
+  final ValueChanged<String?> onWarehouse;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            0,
+            AppSpacing.screenPadding,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Filters',
+                      style: ProductsMobileTypography.sectionTitle(
+                        context,
+                      ).copyWith(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      onCategory(null);
+                      onWarehouse(null);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Reset'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _SheetGroup(
+                        label: 'Category',
+                        child: _OptionWrap(
+                          labels: [for (final c in categories) c.name],
+                          values: [for (final c in categories) c.id],
+                          selected: categoryFilterId,
+                          allLabel: 'All categories',
+                          onSelected: onCategory,
+                        ),
+                      ),
+                      _SheetGroup(
+                        label: 'Warehouse',
+                        child: _OptionWrap(
+                          labels: [for (final w in warehouses) w.name],
+                          values: [for (final w in warehouses) w.id],
+                          selected: warehouseFilterId,
+                          allLabel: 'All warehouses',
+                          onSelected: onWarehouse,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                ),
+                child: const Text('Show results'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetGroup extends StatelessWidget {
+  const _SheetGroup({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: ProductsMobileTypography.caption(context).copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _OptionWrap extends StatelessWidget {
+  const _OptionWrap({
+    required this.labels,
+    required this.values,
+    required this.selected,
+    required this.allLabel,
+    required this.onSelected,
+  });
+
+  final List<String> labels;
+  final List<String> values;
+  final String? selected;
+  final String allLabel;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        ChoiceChip(
+          label: Text(allLabel),
+          selected: selected == null || selected!.isEmpty,
+          showCheckmark: false,
+          visualDensity: VisualDensity.compact,
+          onSelected: (_) => onSelected(null),
+        ),
+        for (var i = 0; i < labels.length; i++)
+          ChoiceChip(
+            label: Text(labels[i]),
+            selected: selected == values[i],
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            onSelected: (_) => onSelected(values[i]),
+          ),
+      ],
     );
   }
 }
@@ -1979,149 +2389,105 @@ class ProductsMobileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
     final imageUrl = resolveProductImageUrl(product.imageUrl);
+    final category = product.category;
+    final subtitle = category != null && category.isNotEmpty
+        ? '${product.sku} · $category'
+        : product.sku;
 
     return AppCard(
       elevated: true,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       onTap: onView,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ProductImage(imageUrl: imageUrl, size: 60),
+              _ProductImage(imageUrl: imageUrl, size: 52),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.name,
-                      maxLines: 2,
-                      softWrap: true,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                       style: ProductsMobileTypography.cardTitle(context)
                           .copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontSize: 14.5,
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                          ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
+                    // SKU and category share one line — they were three
+                    // separate wrapping runs before.
                     Text(
-                      product.sku,
+                      subtitle,
                       maxLines: 1,
-                      softWrap: true,
-                      style: ProductsMobileTypography.caption(context).copyWith(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: ProductsMobileTypography.caption(
+                        context,
+                      ).copyWith(color: colors.textSecondary, height: 1.25),
+                    ),
+                    const SizedBox(height: 5),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ProductEnterpriseStatusBadge(
+                        label: product.stockStatusLabel,
+                        dense: true,
                       ),
                     ),
-                    if (product.category != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        product.category!,
-                        maxLines: 2,
-                        softWrap: true,
-                        style: ProductsMobileTypography.caption(context).copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
+              ),
+              // Five stacked action chips collapse into one overflow menu.
+              _ProductActionsMenu(
+                canManage: canManage,
+                isAdmin: isAdmin,
+                onView: onView,
+                onEdit: onEdit,
+                onStockHistory: onStockHistory,
+                onTransfer: onTransfer,
+                onDelete: onDelete,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ProductEnterpriseStatusBadge(label: product.stockStatusLabel),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns =
-                  MobileUi.statTileColumns(MediaQuery.sizeOf(context).width);
-              const gap = AppSpacing.sm;
-              final tileWidth =
-                  (constraints.maxWidth - gap * (columns - 1)) / columns;
-
-              final tiles = [
-                _MobileStatTile(
-                  label: 'Unit Price',
-                  value: WmsFormatters.currency(product.unitPrice),
-                ),
-                _MobileStatTile(
-                  label: 'Current Stock',
-                  value: WmsFormatters.quantity(product.totalStock),
-                ),
-                _MobileStatTile(
-                  label: 'Warehouses',
-                  value: '${product.warehouseCount ?? 0}',
-                ),
-              ];
-
-              return Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: [
-                  for (final tile in tiles)
-                    SizedBox(
-                      width: tileWidth,
-                      child: tile,
-                    ),
-                ],
-              );
-            },
+          Divider(
+            height: 1,
+            thickness: 0.8,
+            color: colors.border.withValues(alpha: 0.6),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            product.updatedAt != null
-                ? 'Updated ${WmsFormatters.relativeTime(product.updatedAt)}'
-                : 'Updated —',
-            maxLines: 2,
-            softWrap: true,
-            style: ProductsMobileTypography.caption(context).copyWith(
-              color: colors.textTertiary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const Divider(height: 1),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
+          Row(
             children: [
-              _ActionChip(
-                icon: Icons.visibility_outlined,
-                label: 'View',
-                onTap: onView,
+              _ProductStat(
+                label: 'Unit Price',
+                value: WmsFormatters.currency(product.unitPrice),
               ),
-              if (canManage) ...[
-                _ActionChip(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit',
-                  onTap: onEdit,
-                ),
-                _ActionChip(
-                  icon: Icons.swap_horiz,
-                  label: 'Transfer',
-                  onTap: onTransfer,
-                ),
-              ],
-              _ActionChip(
-                icon: Icons.history,
-                label: 'History',
-                onTap: onStockHistory,
+              _ProductStat(
+                label: 'Stock',
+                value: WmsFormatters.quantity(product.totalStock),
               ),
-              if (isAdmin && onDelete != null)
-                _ActionChip(
-                  icon: Icons.delete_outline,
-                  label: 'Delete',
-                  onTap: onDelete!,
-                  destructive: true,
-                ),
+              _ProductStat(
+                label: 'Warehouses',
+                value: '${product.warehouseCount ?? 0}',
+              ),
+              _ProductStat(
+                label: 'Updated',
+                value: product.updatedAt != null
+                    ? WmsFormatters.relativeTime(product.updatedAt)
+                    : '—',
+                alignEnd: true,
+              ),
             ],
           ),
         ],
@@ -2130,47 +2496,156 @@ class ProductsMobileCard extends StatelessWidget {
   }
 }
 
-class _MobileStatTile extends StatelessWidget {
-  const _MobileStatTile({required this.label, required this.value});
+/// Overflow menu replacing the row of action chips.
+class _ProductActionsMenu extends StatelessWidget {
+  const _ProductActionsMenu({
+    required this.canManage,
+    required this.isAdmin,
+    required this.onView,
+    required this.onEdit,
+    required this.onStockHistory,
+    required this.onTransfer,
+    this.onDelete,
+  });
 
-  final String label;
-  final String value;
+  final bool canManage;
+  final bool isAdmin;
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onStockHistory;
+  final VoidCallback onTransfer;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final colors = WmsUiColors.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
+
+    return PopupMenuButton<VoidCallback>(
+      onSelected: (action) => action(),
+      tooltip: 'Product actions',
+      position: PopupMenuPosition.under,
+      icon: Icon(
+        Icons.more_vert_rounded,
+        size: 20,
+        color: colors.textSecondary,
       ),
-      decoration: BoxDecoration(
-        color: colors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        border: Border.all(color: colors.border),
+      padding: EdgeInsets.zero,
+      // Keeps the tap target accessible without inflating the card row.
+      constraints: const BoxConstraints(minWidth: 180),
+      splashRadius: 20,
+      itemBuilder: (context) => [
+        _item(context, Icons.visibility_outlined, 'View details', onView),
+        if (canManage) ...[
+          _item(context, Icons.edit_outlined, 'Edit product', onEdit),
+          _item(
+            context,
+            Icons.swap_horiz_rounded,
+            'Transfer stock',
+            onTransfer,
+          ),
+        ],
+        _item(context, Icons.history_rounded, 'Stock history', onStockHistory),
+        if (isAdmin && onDelete != null) ...[
+          const PopupMenuDivider(height: 1),
+          _item(
+            context,
+            Icons.delete_outline_rounded,
+            'Delete product',
+            onDelete!,
+            destructive: true,
+          ),
+        ],
+      ],
+    );
+  }
+
+  PopupMenuItem<VoidCallback> _item(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback action, {
+    bool destructive = false,
+  }) {
+    final colors = WmsUiColors.of(context);
+    final color = destructive ? colors.error : colors.textPrimary;
+
+    return PopupMenuItem<VoidCallback>(
+      value: action,
+      height: 44,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: WmsDesignTokens.body(
+                context,
+              ).copyWith(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// One equal-width cell of the card's metric row.
+///
+/// Replaces the bordered stat boxes, which each carried their own padding,
+/// border and background and wrapped onto extra runs on narrow phones.
+class _ProductStat extends StatelessWidget {
+  const _ProductStat({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = WmsUiColors.of(context);
+    final align = alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final boxAlign = alignEnd ? Alignment.centerRight : Alignment.centerLeft;
+
+    return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: align,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            maxLines: 2,
-            softWrap: true,
-            style: ProductsMobileTypography.caption(context).copyWith(
-              color: colors.textTertiary,
-              fontWeight: FontWeight.w600,
-            ),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+            style: ProductsMobileTypography.caption(
+              context,
+            ).copyWith(fontSize: 11, color: colors.textTertiary, height: 1.2),
           ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              maxLines: 1,
-              style: ProductsMobileTypography.body(context).copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
+          const SizedBox(height: 2),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: boxAlign,
+              child: Text(
+                value,
+                maxLines: 1,
+                softWrap: false,
+                style: ProductsMobileTypography.body(context).copyWith(
+                  fontSize: 13,
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
           ),
@@ -2214,17 +2689,17 @@ class ProductsMobileCardList extends StatelessWidget {
           padding: MobileUi.screenHorizontalInsetsOf(context),
           child: Text(
             'Product List',
-            style: ProductsMobileTypography.sectionTitle(context).copyWith(
-              color: colors.textPrimary,
-            ),
+            style: ProductsMobileTypography.sectionTitle(
+              context,
+            ).copyWith(color: colors.textPrimary),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         for (var i = 0; i < products.length; i++)
           Padding(
-            padding: MobileUi.screenHorizontalInsetsOf(context).copyWith(
-              bottom: AppSpacing.md,
-            ),
+            padding: MobileUi.screenHorizontalInsetsOf(
+              context,
+            ).copyWith(bottom: AppSpacing.md),
             child: ProductsMobileCard(
               product: products[i],
               canManage: canManage,
@@ -2233,8 +2708,7 @@ class ProductsMobileCardList extends StatelessWidget {
               onEdit: () => onEdit(products[i]),
               onStockHistory: onStockHistory,
               onTransfer: onTransfer,
-              onDelete:
-                  onDelete != null ? () => onDelete!(products[i]) : null,
+              onDelete: onDelete != null ? () => onDelete!(products[i]) : null,
             ),
           ),
       ],

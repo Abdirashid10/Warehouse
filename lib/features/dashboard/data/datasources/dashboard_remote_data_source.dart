@@ -1,12 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:logisticsmobile/core/errors/api_exception.dart';
 import 'package:logisticsmobile/core/errors/error_message_mapper.dart';
 import 'package:logisticsmobile/core/network/api_constants.dart';
 import 'package:logisticsmobile/core/network/json_list_parser.dart';
-import 'package:logisticsmobile/core/theme/app_colors.dart';
 import 'package:logisticsmobile/features/dashboard/domain/entities/staff_dashboard_data.dart';
 import 'package:logisticsmobile/features/dashboard/presentation/widgets/dashboard_enterprise_widgets.dart';
+
 class DashboardRemoteDataSource {
   DashboardRemoteDataSource(this._dio);
 
@@ -42,7 +41,8 @@ class DashboardRemoteDataSource {
       return const DashboardAlerts();
     }
     return DashboardAlerts(
-      lowStockCount: (alerts['lowStockCount'] ?? alerts['low_stock'] ?? 0) as int,
+      lowStockCount:
+          (alerts['lowStockCount'] ?? alerts['low_stock'] ?? 0) as int,
       outOfStockCount:
           (alerts['outOfStockCount'] ?? alerts['out_of_stock'] ?? 0) as int,
       expiredCount: (alerts['expiredCount'] ?? alerts['expired'] ?? 0) as int,
@@ -61,7 +61,9 @@ class DashboardRemoteDataSource {
         totalUnits: w['totalUnits'] ?? w['total_units'] ?? 0,
         utilization: (w['utilization'] ?? 0) as int,
         location: (w['location'] ?? w['address'])?.toString(),
-        productCount: _asInt(w['productCount'] ?? w['product_count'] ?? w['lineCount']),
+        productCount: _asInt(
+          w['productCount'] ?? w['product_count'] ?? w['lineCount'],
+        ),
       );
     }).toList();
   }
@@ -88,12 +90,14 @@ class DashboardRemoteDataSource {
         'order_creation_trend',
       ],
       defaultLineLabel: 'Orders',
-      defaultLineColor: AppColors.primary,
+      defaultLineRole: DashboardSeriesRole.orders,
     );
   }
 
   /// Backend-provided movement trend series from `/dashboard/stats` or `/dashboard/widgets`.
-  DashboardChartTimeSeries? parseMovementTrendSeries(Map<String, dynamic> source) {
+  DashboardChartTimeSeries? parseMovementTrendSeries(
+    Map<String, dynamic> source,
+  ) {
     final dual = _parseDualMovementTrend(source);
     if (dual != null) return dual;
 
@@ -106,11 +110,13 @@ class DashboardRemoteDataSource {
         'stock_movement_trend',
       ],
       defaultLineLabel: 'Movements',
-      defaultLineColor: AppColors.info,
+      defaultLineRole: DashboardSeriesRole.transfer,
     );
   }
 
-  DashboardChartTimeSeries? _parseDualMovementTrend(Map<String, dynamic> source) {
+  DashboardChartTimeSeries? _parseDualMovementTrend(
+    Map<String, dynamic> source,
+  ) {
     final raw = _firstMap(source, const [
       'movementTrend',
       'movement_trend',
@@ -143,13 +149,13 @@ class DashboardRemoteDataSource {
         if (inboundValues.isNotEmpty)
           DashboardChartLine(
             label: 'Inbound',
-            color: AppColors.success,
+            role: DashboardSeriesRole.inbound,
             values: inboundValues,
           ),
         if (outboundValues.isNotEmpty)
           DashboardChartLine(
             label: 'Outbound',
-            color: const Color(0xFFC2410C),
+            role: DashboardSeriesRole.outbound,
             values: outboundValues,
           ),
       ],
@@ -160,13 +166,18 @@ class DashboardRemoteDataSource {
     Map<String, dynamic> source, {
     required List<String> keys,
     required String defaultLineLabel,
-    required Color defaultLineColor,
+    required DashboardSeriesRole defaultLineRole,
   }) {
     final raw = _firstMap(source, keys);
     if (raw == null) return null;
 
     final labels = _parseLabels(raw);
-    final values = _parseValues(raw, const ['values', 'data', 'counts', 'series']);
+    final values = _parseValues(raw, const [
+      'values',
+      'data',
+      'counts',
+      'series',
+    ]);
     if (labels.isEmpty || values.isEmpty) return null;
 
     return DashboardChartTimeSeries(
@@ -174,14 +185,17 @@ class DashboardRemoteDataSource {
       lines: [
         DashboardChartLine(
           label: (raw['label'] ?? defaultLineLabel).toString(),
-          color: defaultLineColor,
+          role: defaultLineRole,
           values: values,
         ),
       ],
     );
   }
 
-  Map<String, dynamic>? _firstMap(Map<String, dynamic> source, List<String> keys) {
+  Map<String, dynamic>? _firstMap(
+    Map<String, dynamic> source,
+    List<String> keys,
+  ) {
     for (final key in keys) {
       final value = source[key];
       if (value is Map<String, dynamic>) return value;

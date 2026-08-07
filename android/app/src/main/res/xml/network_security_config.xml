@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 9 (API 28) and above block plaintext HTTP by default.
+
+  The Logistics WMS API is served over plain HTTP on the local network, so
+  cleartext has to be permitted for it — but only for it. A blanket
+  `android:usesCleartextTraffic="true"` would downgrade every connection the
+  app makes, including any future third-party HTTPS endpoint. The allow-list
+  below keeps HTTPS enforced everywhere except the on-premises API hosts.
+
+  If the API server moves to a new address, add it here as well as passing the
+  API_HOST dart-define, otherwise release builds will fail to connect with
+  "CLEARTEXT communication to [host] not permitted".
+-->
+<network-security-config>
+    <!-- Default posture: HTTPS only, system trust anchors. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- On-premises API + local development hosts. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- LAN address of the Node API server. -->
+        <domain includeSubdomains="false">172.16.0.44</domain>
+        <!-- Android emulator alias for the host machine's loopback. -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Same-machine development. -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
