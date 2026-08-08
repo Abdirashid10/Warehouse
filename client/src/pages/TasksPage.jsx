@@ -5,7 +5,8 @@ import { api } from '../api/client';
 import { fetchTaskList } from '../api/taskList';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from '../components/profile/UserAvatar';
-import { TaskPriorityBadge, TaskStatusBadge, TaskOverdueBadge, TASK_KPI_ITEMS } from '../components/tasks/TaskBadges';
+import { TaskPriorityBadge, TaskStatusBadge, TaskOverdueBadge, DueDateBadge, TASK_KPI_ITEMS } from '../components/tasks/TaskBadges';
+import { dueDateInfo } from '../utils/dueDate';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { Button } from '../components/ui/button';
 import {
@@ -22,11 +23,9 @@ import {
   taskWorkflowStatus,
 } from '../utils/taskOverdue';
 import {
-  AlertTriangle,
   ArrowRight,
   ArrowRightLeft,
   CheckCircle2,
-  Clock,
   ClipboardList,
   Loader2,
   Pencil,
@@ -44,16 +43,6 @@ import {
 function formatDue(iso) {
   if (!iso) return '—';
   try { return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); } catch { return '—'; }
-}
-
-function relDue(iso) {
-  if (!iso) return null;
-  const ms = new Date(iso).getTime() - Date.now();
-  if (ms < 0) return null;
-  const h = Math.floor(ms / 3600000);
-  if (h < 1) return 'soon';
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
 }
 
 /* ─── Constants ─── */
@@ -318,10 +307,10 @@ export function TasksPage() {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {tasks.map((task) => {
-                  const due = task.due_date ? new Date(task.due_date) : null;
                   const closed = ['Completed', 'Rejected'].includes(task.status);
                   const overdue = isTaskOverdue(task);
-                  const isSoon = due && !overdue && due.getTime() - Date.now() < 86400000 && !closed;
+                  // Shared urgency helper — same thresholds as the task detail page.
+                  const due = dueDateInfo(task);
                   const meta = task.task_type_meta;
                   const isOp = Boolean(meta?.movement_type);
 
@@ -411,14 +400,8 @@ export function TasksPage() {
 
                       {/* Due */}
                       <td className="px-3 py-2.5 hidden lg:table-cell whitespace-nowrap">
-                        {overdue ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
-                            <AlertTriangle className="h-3 w-3" /> Overdue
-                          </span>
-                        ) : isSoon ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                            <Clock className="h-3 w-3" /> {relDue(task.due_date) || 'Soon'}
-                          </span>
+                        {overdue || due.isUrgent ? (
+                          <DueDateBadge task={task} />
                         ) : (
                           <span className="text-[11px] text-muted-foreground">{formatDue(task.due_date)}</span>
                         )}

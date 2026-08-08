@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import { UserAvatar } from '../profile/UserAvatar';
+import { StaffCombobox } from './StaffCombobox';
 import { Button } from '../ui/button';
 import { Field, Input } from '../ui/input';
 import {
@@ -22,8 +22,11 @@ async function fetchTaskMeta() {
   return data;
 }
 
-async function fetchAssignees(warehouseId) {
-  const { data } = await api.get('/tasks/meta/assignees', { params: { warehouse_id: warehouseId } });
+/** Staff eligible for the task — transfers also count staff at the destination warehouse. */
+async function fetchAssignees(warehouseId, toWarehouseId) {
+  const { data } = await api.get('/tasks/meta/assignees', {
+    params: { warehouse_id: warehouseId, ...(toWarehouseId ? { to_warehouse_id: toWarehouseId } : {}) },
+  });
   return data;
 }
 
@@ -172,8 +175,8 @@ export function TaskFormModal({ mode = 'create', editTask = null, onClose, onSav
 
   /* ─── Assignees ─── */
   const { data: assigneeData, isLoading: assigneesLoading } = useQuery({
-    queryKey: ['tasks', 'assignees', form.warehouse_id],
-    queryFn: () => fetchAssignees(form.warehouse_id),
+    queryKey: ['tasks', 'assignees', form.warehouse_id, form.to_warehouse_id || null],
+    queryFn: () => fetchAssignees(form.warehouse_id, form.to_warehouse_id),
     enabled: Boolean(form.warehouse_id),
   });
 
@@ -227,8 +230,10 @@ export function TaskFormModal({ mode = 'create', editTask = null, onClose, onSav
   /**
    * Writes the chosen staff id into the form and drops the "assign a staff member"
    * error immediately, so the user can submit without a second round-trip.
+   * Receives the staff object from the combobox (or null when cleared).
    */
-  function handleAssigneeSelect(staffId) {
+  function handleAssigneeSelect(staff) {
+    const staffId = staff?.id || '';
     setForm((f) => ({ ...f, assigned_to_id: staffId }));
     if (staffId) setFormError((e) => (e === ASSIGNEE_REQUIRED_ERROR ? '' : e));
   }
@@ -917,54 +922,32 @@ function CompactWarning({ title, sub }) {
 }
 
 /**
- * Staff assignment dropdown — same `<select className="wms-input">` shape as the
- * Priority / Transfer Route selects above it.
- *
- * `assignees` is the full pool the server resolved for this warehouse (it already falls back
- * to every active staff member when the warehouse has no mapping of its own), so the list is
- * never empty in practice. `onSelect` receives the staff id and the parent writes it straight
- * into `assigned_to_id`, clearing the "Assign a staff member." error on the same change.
+ * Staff assignment field — a searchable combobox filtered to the warehouse(s) this task
+ * touches. The server resolves eligibility (source + destination for transfers) and falls
+ * back to the full active-staff pool when neither warehouse has a mapping, so the control is
+ * never empty. Selecting writes `assigned_to_id` and clears the validation error at once.
  */
 function StaffPicker({ warehouseId, assignees, loading, fallback, selectedId, error, onSelect }) {
-  const placeholder = !warehouseId
-    ? 'Select a warehouse first…'
-    : loading
-      ? 'Loading staff…'
-      : assignees.length === 0
-        ? 'No active staff members found'
-        : 'Select staff member…';
-
   const selectedStaff = assignees.find((s) => s.id === selectedId) || null;
 
   return (
     <Field label="Assign to" required error={error}>
-      <select
-        value={selectedId || ''}
-        onChange={(e) => onSelect(e.target.value)}
-        disabled={!warehouseId || loading || assignees.length === 0}
-        aria-label="Assign staff member"
-        className="wms-input mt-1"
-      >
-        <option value="">{placeholder}</option>
-        {assignees.map((s) => (
-          <option key={s.id} value={s.id}>{staffLabel(s)}</option>
-        ))}
-      </select>
-
-      {warehouseId && !loading && fallback && assignees.length > 0 && (
-        <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
-          No staff mapped to this warehouse — showing all {assignees.length} active staff.
-        </p>
-      )}
+      <StaffCombobox
+        staff={assignees}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        loading={loading}
+        fallback={fallback}
+        disabled={!warehouseId}
+      />
 
       {selectedStaff && (
         <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <UserAvatar
-            user={{ fullName: selectedStaff.full_name, username: selectedStaff.username, email: selectedStaff.email, avatar: selectedStaff.avatar }}
-            size="sm"
-          />
-          Assigned to <span className="font-semibold text-foreground">{selectedStaff.full_name || selectedStaff.username}</span>
           <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+          Assigned to <span className="font-semibold text-foreground">{staffLabel(selectedStaff)}</span>
+          {selectedStaff.warehouse_names?.length > 0 && (
+            <span className="text-[10px]">· {selectedStaff.warehouse_names.join(', ')}</span>
+          )}
         </p>
       )}
     </Field>

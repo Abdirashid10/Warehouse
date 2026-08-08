@@ -1,5 +1,6 @@
 import { cn } from '../../lib/utils';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
+import { dueDateInfo } from '../../utils/dueDate';
 
 const STATUS_STYLES = {
   Pending: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-500/15 dark:text-slate-200',
@@ -37,6 +38,33 @@ export function TaskOverdueBadge({ className }) {
     <span className={cn('inline-flex items-center gap-0.5 wms-badge border-red-300 bg-red-100 text-red-900 dark:border-red-600/50 dark:bg-red-900/30 dark:text-red-200', className)}>
       <AlertTriangle className="h-3 w-3" />
       Overdue
+    </span>
+  );
+}
+
+const DUE_TONES = {
+  red: 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300',
+  amber: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200',
+  muted: 'border-border bg-muted text-muted-foreground',
+};
+
+/**
+ * Urgency badge for a task deadline — renders only inside the 24h window (or once overdue),
+ * so it stays a signal rather than decoration. Pass `alwaysShow` to render the neutral
+ * "Due in 3d" variant too.
+ */
+export function DueDateBadge({ task, alwaysShow = false, className }) {
+  const info = dueDateInfo(task);
+  if (!info.label) return null;
+  if (!info.isUrgent && !alwaysShow) return null;
+
+  return (
+    <span
+      className={cn('inline-flex items-center gap-1 wms-badge', DUE_TONES[info.tone] || DUE_TONES.muted, className)}
+      title={info.dueDate ? info.dueDate.toLocaleString() : undefined}
+    >
+      {info.state === 'overdue' ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+      {info.label}
     </span>
   );
 }

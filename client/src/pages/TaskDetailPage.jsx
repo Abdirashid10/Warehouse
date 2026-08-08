@@ -4,15 +4,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from '../components/profile/UserAvatar';
-import { TaskPriorityBadge, TaskStatusBadge, TaskOverdueBadge } from '../components/tasks/TaskBadges';
+import { TaskPriorityBadge, TaskStatusBadge, TaskOverdueBadge, DueDateBadge } from '../components/tasks/TaskBadges';
 import { isTaskOverdue, taskWorkflowStatus } from '../utils/taskOverdue';
+import { dueDateInfo, formatGap } from '../utils/dueDate';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { Button } from '../components/ui/button';
 import {
   canManageTasks,
   canDeleteTasks,
   getStatusActions,
-  ACTION_LABELS,
+  primaryActionFor,
+  taskActionConfig,
 } from '../utils/taskPermissions';
 import {
   AlertTriangle,
@@ -94,6 +96,10 @@ const ACTION_STYLES = {
   slate: 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600',
 };
 
+/** The forward transition (Accept → Start Work → Complete …) reads as a solid CTA. */
+const PRIMARY_ACTION_STYLE =
+  'border-transparent bg-accent text-white shadow-sm hover:brightness-110 dark:text-slate-900';
+
 const MOVEMENT_LABELS = { INBOUND: 'Inbound', OUTBOUND: 'Outbound', TRANSFER: 'Transfer', ADJUSTMENT: 'Adjustment' };
 
 const TIMELINE_COLORS = {
@@ -142,7 +148,10 @@ export function TaskDetailPage() {
     staleTime: 30_000,
   });
 
-  const actions = task ? getStatusActions(taskWorkflowStatus(task), user?.role) : [];
+  const workflowStatus = task ? taskWorkflowStatus(task) : null;
+  const actions = task ? getStatusActions(workflowStatus, user?.role) : [];
+  const primaryAction = workflowStatus ? primaryActionFor(workflowStatus) : null;
+  const due = task ? dueDateInfo(task) : null;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -164,13 +173,19 @@ export function TaskDetailPage() {
     onError: (err) => setActionError(err.response?.data?.message || 'Failed to add note'),
   });
 
+  function submitNote(e) {
+    e.preventDefault();
+    const text = noteText.trim();
+    if (!text || noteMutation.isPending) return;
+    noteMutation.mutate(text);
+  }
+
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/tasks/${id}`),
     onSuccess: () => { invalidate(); navigate('/tasks'); },
   });
 
   /* ── Derived data ── */
-  const due = task?.due_date ? new Date(task.due_date) : null;
   const isOverdue = task ? (task.is_overdue ?? isTaskOverdue(task)) : false;
   const completionTime = duration(task?.created_at, task?.completed_at);
 
@@ -218,7 +233,7 @@ export function TaskDetailPage() {
                   {meta.movement_type}
                 </span>
               )}
-              {isOverdue && <TaskOverdueBadge />}
+              {isOverdue ? <TaskOverdueBadge /> : <DueDateBadge task={task} />}
             </div>
             <h1 className="mt-2 text-lg font-semibold leading-snug text-foreground sm:text-xl">{task.title}</h1>
             {task.description && <p className="mt-1 text-xs text-muted-foreground leading-relaxed max-w-2xl">{task.description}</p>}
@@ -240,14 +255,34 @@ export function TaskDetailPage() {
         {/* Info strip */}
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
           <InfoChip icon={<ClipboardList className="h-3 w-3" />} label={task.task_type} />
-          <InfoChip icon={<Warehouse className="h-3 w-3" />} label={task.warehouse?.name || '—'} />
+          {/* A transfer shows its full route here — the header must never read as if the
+              task belonged to a single warehouse. */}
+          {isTransfer ? (
+            <div className="flex items-center gap-1.5">
+              <Warehouse className="h-3 w-3" />
+              <span className="font-medium text-foreground">{task.warehouse?.name || '—'}</span>
+              <ArrowRight className="h-3 w-3 text-muted-foreground" />
+              <span className="font-medium text-emerald-700 dark:text-emerald-300">{task.to_warehouse?.name || '—'}</span>
+            </div>
+          ) : (
+            <InfoChip icon={<Warehouse className="h-3 w-3" />} label={task.warehouse?.name || '—'} />
+          )}
           {task.assigned_to && (
             <div className="flex items-center gap-1.5">
               <UserAvatar user={{ fullName: task.assigned_to.full_name, username: task.assigned_to.username, email: task.assigned_to.email, avatar: task.assigned_to.avatar }} size="sm" />
               <span className="font-medium text-foreground">{task.assigned_to.full_name || task.assigned_to.username}</span>
             </div>
           )}
-          <InfoChip icon={<Clock className="h-3 w-3" />} label={fmtDate(task.due_date)} className={isOverdue ? 'text-red-600 dark:text-red-400 font-semibold' : ''} />
+          <InfoChip
+            icon={<Clock className="h-3 w-3" />}
+            label={fmtDate(task.due_date)}
+            className={due?.tone === 'red' ? 'text-red-600 dark:text-red-400 font-semibold' : due?.tone === 'amber' ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}
+          />
+          {due?.isTightWindow && !closed && (
+            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-px text-[10px] font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+              Tight window · {formatGap(due.windowHours * 3600000)} from creation
+            </span>
+          )}
           {completionTime && <InfoChip icon={<CheckCircle2 className="h-3 w-3 text-emerald-500" />} label={`Done in ${completionTime}`} />}
         </div>
       </div>
@@ -329,8 +364,8 @@ export function TaskDetailPage() {
             <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 text-xs">
               <DetailRow label="Assigned to" value={task.assigned_to?.full_name || task.assigned_to?.username} />
               <DetailRow label="Assigned by" value={task.assigned_by?.full_name || task.assigned_by?.username} />
-              <DetailRow label="Warehouse" value={task.warehouse?.name} />
-              {task.to_warehouse && <DetailRow label="Destination" value={task.to_warehouse.name} />}
+              <DetailRow label={isTransfer ? 'Source warehouse' : 'Warehouse'} value={task.warehouse?.name} />
+              {task.to_warehouse && <DetailRow label="Destination warehouse" value={task.to_warehouse.name} />}
               {task.related_product && <DetailRow label="Product" value={`${task.related_product.sku} — ${task.related_product.name}`} />}
               {task.related_order && <DetailRow label="Order" value={`${task.related_order.order_number} — ${task.related_order.customer_name}`} />}
               {task.supplier_name && <DetailRow label="Supplier" value={task.supplier_name} />}
@@ -363,24 +398,26 @@ export function TaskDetailPage() {
 
           {/* Notes */}
           <Section title="Notes">
-            <div className="flex gap-1.5">
+            <form onSubmit={submitNote} className="flex items-center gap-2">
               <input
                 type="text"
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && noteText.trim()) noteMutation.mutate(noteText.trim()); }}
                 placeholder="Add an operational note…"
-                className="wms-input h-8 flex-1 text-xs"
+                aria-label="Note text"
+                className="wms-input h-9 flex-1 text-xs"
               />
               <button
-                type="button"
+                type="submit"
                 disabled={!noteText.trim() || noteMutation.isPending}
-                onClick={() => noteText.trim() && noteMutation.mutate(noteText.trim())}
-                className="inline-flex h-8 items-center rounded-md border border-border bg-card px-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-900"
               >
-                <MessageSquarePlus className="h-3.5 w-3.5" />
+                {noteMutation.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <MessageSquarePlus className="h-3.5 w-3.5" />}
+                {noteMutation.isPending ? 'Posting…' : 'Add Note'}
               </button>
-            </div>
+            </form>
             {(task.notes || []).length > 0 ? (
               <ul className="mt-2 space-y-1">
                 {task.notes.slice().reverse().map((n) => (
@@ -410,19 +447,27 @@ export function TaskDetailPage() {
               )}
               <div className="space-y-1.5">
                 {actions.map((nextStatus) => {
-                  const cfg = ACTION_LABELS[nextStatus];
+                  const cfg = taskActionConfig(nextStatus, task);
                   if (!cfg) return null;
                   const AIcon = ACTION_ICONS[nextStatus] || Play;
+                  const isPrimary = nextStatus === primaryAction;
                   return (
                     <button
                       key={nextStatus}
                       type="button"
                       disabled={statusMutation.isPending}
                       onClick={() => statusMutation.mutate({ status: nextStatus })}
-                      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${ACTION_STYLES[cfg.variant] || ACTION_STYLES.slate}`}
+                      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                        isPrimary ? PRIMARY_ACTION_STYLE : ACTION_STYLES[cfg.variant] || ACTION_STYLES.slate
+                      }`}
                     >
-                      <AIcon className="h-3.5 w-3.5" />
+                      {statusMutation.isPending && statusMutation.variables?.status === nextStatus ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <AIcon className="h-3.5 w-3.5" />
+                      )}
                       {cfg.label}
+                      {isPrimary && <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-70" />}
                     </button>
                   );
                 })}

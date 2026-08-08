@@ -33,7 +33,13 @@ const TASK_POPULATE = [
   { path: 'notes.created_by', select: USER_SELECT },
 ];
 
-async function ensureStaffAssignedToWarehouse(userId, warehouseId) {
+/**
+ * Validate an assignee against the warehouses a task touches.
+ *
+ * `warehouseIds` may hold several warehouses (a transfer's source *and* destination) — staff
+ * mapped to any of them are eligible, matching what the assignee picker offers.
+ */
+async function ensureStaffAssignedToWarehouse(userId, warehouseIds) {
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     const err = new Error('Assigned staff is required');
     err.status = 400;
@@ -53,19 +59,63 @@ async function ensureStaffAssignedToWarehouse(userId, warehouseId) {
     throw err;
   }
 
-  // Fast path: the user doc already maps to this warehouse.
-  const assigned = (user.assignedWarehouseIds || []).map((id) => id.toString());
-  if (assigned.includes(String(warehouseId))) return user;
+  const targets = (Array.isArray(warehouseIds) ? warehouseIds : [warehouseIds])
+    .filter(Boolean)
+    .map((id) => String(id._id || id));
 
-  // Otherwise mirror exactly what the assignee picker offered: when the warehouse has
-  // no mapped staff we fall back to the full active-staff pool, so any of them is valid.
-  const { staff, fallback } = await getWarehouseAssignees(warehouseId);
+  // Fast path: the user doc already maps to one of the task's warehouses.
+  const assigned = (user.assignedWarehouseIds || []).map((id) => id.toString());
+  if (assigned.some((id) => targets.includes(id))) return user;
+
+  // Otherwise mirror exactly what the assignee picker offered: when no warehouse involved
+  // has mapped staff we fall back to the full active-staff pool, so any of them is valid.
+  const { staff, fallback } = await getWarehouseAssignees(targets);
   if (fallback) return user;
   if (staff.some((s) => String(s._id) === String(user._id))) return user;
 
   const err = new Error('Staff member is not assigned to the selected warehouse');
   err.status = 400;
   throw err;
+}
+
+/**
+ * Resolve the destination warehouse for a task, guaranteeing it stays consistent for the
+ * whole lifecycle (creation → detail page → dashboard → completed movement).
+ *
+ * Rules, applied identically on create and update:
+ *  - non-transfer task types never keep a destination (prevents a stale one surviving a
+ *    task-type change and rendering as someone else's warehouse later),
+ *  - a transfer must name a destination that actually exists in the warehouses collection,
+ *  - source and destination must differ.
+ *
+ * @returns {Promise<mongoose.Types.ObjectId|null>} the id to persist.
+ */
+async function resolveDestinationWarehouse({ taskType, warehouseId, toWarehouseId }) {
+  const meta = getTaskTypeMeta(taskType);
+  if (meta?.movementType !== 'TRANSFER') return null;
+
+  const destId = toWarehouseId?._id || toWarehouseId;
+  if (!destId || !mongoose.Types.ObjectId.isValid(destId)) {
+    const err = new Error('Destination warehouse is required for transfer tasks');
+    err.status = 400;
+    throw err;
+  }
+
+  const sourceId = warehouseId?._id || warehouseId;
+  if (String(destId) === String(sourceId)) {
+    const err = new Error('Source and destination must be different warehouses');
+    err.status = 400;
+    throw err;
+  }
+
+  const destination = await Warehouse.findById(destId).select('_id').lean();
+  if (!destination) {
+    const err = new Error('Destination warehouse not found');
+    err.status = 400;
+    throw err;
+  }
+
+  return destination._id;
 }
 
 /** Overdue is computed at read time — notify only, never mutate workflow status. */
@@ -207,8 +257,6 @@ async function createTask(payload, actor) {
     throw err;
   }
 
-  await ensureStaffAssignedToWarehouse(assignedToId, warehouseId);
-
   if (!TASK_TYPES.includes(taskType)) {
     const err = new Error('Invalid task type');
     err.status = 400;
@@ -246,11 +294,15 @@ async function createTask(payload, actor) {
     err.status = 400;
     throw err;
   }
-  if (meta?.movementType === 'TRANSFER' && (!toWarehouseId || !mongoose.Types.ObjectId.isValid(toWarehouseId))) {
-    const err = new Error('Destination warehouse is required for transfer tasks');
-    err.status = 400;
-    throw err;
-  }
+  // Validated + normalized here so the stored destination can never drift from the selection.
+  const destinationWarehouseId = await resolveDestinationWarehouse({
+    taskType,
+    warehouseId,
+    toWarehouseId,
+  });
+
+  // Transfer staff may be mapped to either end of the route.
+  await ensureStaffAssignedToWarehouse(assignedToId, [warehouseId, destinationWarehouseId]);
 
   const due = new Date(dueDate);
   if (!dueDate || Number.isNaN(due.getTime())) {
@@ -287,7 +339,7 @@ async function createTask(payload, actor) {
     assignedById: actor.id,
     createdById: actor.id,
     warehouseId,
-    toWarehouseId: toWarehouseId || null,
+    toWarehouseId: destinationWarehouseId,
     dueDate: due,
     relatedOrderId: relatedOrderId || null,
     relatedProductId: relatedProductId || null,
@@ -337,20 +389,27 @@ async function updateTask(id, payload, actor) {
     task.warehouseId = payload.warehouse_id;
   }
 
-  if (payload.to_warehouse_id !== undefined) {
-    task.toWarehouseId = payload.to_warehouse_id || null;
-  }
+  // Re-resolve the destination against the *post-update* type and source, even when the
+  // payload omits it — a task switched away from Transfer must not keep a stale destination,
+  // and a new source must never collide with the existing destination.
+  task.toWarehouseId = await resolveDestinationWarehouse({
+    taskType: task.taskType,
+    warehouseId: task.warehouseId,
+    toWarehouseId: payload.to_warehouse_id !== undefined ? payload.to_warehouse_id : task.toWarehouseId,
+  });
+
+  const taskWarehouses = [task.warehouseId, task.toWarehouseId];
 
   let assigneeChanged = false;
   const previousAssignee = task.assignedToId?.toString();
 
   if (payload.assigned_to_id !== undefined) {
-    await ensureStaffAssignedToWarehouse(payload.assigned_to_id, task.warehouseId);
+    await ensureStaffAssignedToWarehouse(payload.assigned_to_id, taskWarehouses);
     assigneeChanged = previousAssignee !== String(payload.assigned_to_id);
     task.assignedToId = payload.assigned_to_id;
     if (assigneeChanged) task.assignedById = actor.id;
   } else if (payload.warehouse_id !== undefined) {
-    await ensureStaffAssignedToWarehouse(task.assignedToId, task.warehouseId);
+    await ensureStaffAssignedToWarehouse(task.assignedToId, taskWarehouses);
   }
 
   if (payload.due_date !== undefined) {
@@ -677,40 +736,70 @@ async function deleteTask(id) {
 }
 
 /**
- * Staff eligible for assignment at a warehouse.
+ * Staff eligible for assignment at one or more warehouses.
  *
- * Mapped staff are resolved from both sides of the relation (warehouse.assignedStaffIds and
- * user.assignedWarehouseIds) so a half-synced mapping still resolves. When the warehouse has
- * no mapped active staff at all, we fall back to every active staff member instead of
- * returning an empty list — an unmapped warehouse must never block task creation.
+ * Accepts a single id or a list — a transfer passes its source *and* destination, and staff
+ * mapped to either end are eligible. Mapping is resolved from both sides of the relation
+ * (warehouse.assignedStaffIds and user.assignedWarehouseIds) so a half-synced record still
+ * resolves. When none of the warehouses has mapped active staff we fall back to every active
+ * staff member rather than returning an empty list — an unmapped warehouse must never block
+ * task creation.
  *
- * @returns {Promise<{ staff: object[], fallback: boolean }>} fallback=true when the full
- *   active-staff pool is returned because the warehouse has no mapping of its own.
+ * @param {string|string[]} warehouseIds
+ * @returns {Promise<{ staff: object[], fallback: boolean, warehouses: object[] }>} `fallback`
+ *   is true when the full active-staff pool is returned for lack of any mapping. Each staff
+ *   row carries `matchedWarehouseIds` — which of the requested warehouses it maps to.
  */
-async function getWarehouseAssignees(warehouseId) {
-  const empty = { staff: [], fallback: false };
-  if (!mongoose.Types.ObjectId.isValid(warehouseId)) return empty;
-  const warehouse = await Warehouse.findById(warehouseId).select('assignedStaffIds name').lean();
-  if (!warehouse) return empty;
+async function getWarehouseAssignees(warehouseIds) {
+  const requested = [...new Set(
+    (Array.isArray(warehouseIds) ? warehouseIds : [warehouseIds])
+      .filter((id) => id && mongoose.Types.ObjectId.isValid(id._id || id))
+      .map((id) => String(id._id || id))
+  )];
 
+  const empty = { staff: [], fallback: false, warehouses: [] };
+  if (!requested.length) return empty;
+
+  const warehouses = await Warehouse.find({ _id: { $in: requested } })
+    .select('assignedStaffIds name')
+    .lean();
+  if (!warehouses.length) return empty;
+
+  const warehouseIdList = warehouses.map((w) => w._id);
+  const staffIds = warehouses.flatMap((w) => (w.assignedStaffIds || []).filter(Boolean));
   const activeStaff = { role: 'Staff', archived: { $ne: true }, status: 'Active' };
-  const staffIds = (warehouse.assignedStaffIds || []).filter(Boolean);
 
   const mapped = await User.find({
     ...activeStaff,
     $or: [
       ...(staffIds.length ? [{ _id: { $in: staffIds } }] : []),
-      { assignedWarehouseIds: warehouse._id },
+      { assignedWarehouseIds: { $in: warehouseIdList } },
     ],
   })
     .select(USER_SELECT)
     .sort({ username: 1 })
     .lean();
 
-  if (mapped.length) return { staff: mapped, fallback: false };
+  /** Which of the requested warehouses this user maps to, from either side of the relation. */
+  const matchedFor = (user) => warehouses
+    .filter((w) => (w.assignedStaffIds || []).some((id) => String(id) === String(user._id))
+      || (user.assignedWarehouseIds || []).some((id) => String(id) === String(w._id)))
+    .map((w) => String(w._id));
+
+  if (mapped.length) {
+    return {
+      staff: mapped.map((u) => ({ ...u, matchedWarehouseIds: matchedFor(u) })),
+      fallback: false,
+      warehouses,
+    };
+  }
 
   const all = await User.find(activeStaff).select(USER_SELECT).sort({ username: 1 }).lean();
-  return { staff: all, fallback: true };
+  return {
+    staff: all.map((u) => ({ ...u, matchedWarehouseIds: [] })),
+    fallback: true,
+    warehouses,
+  };
 }
 
 module.exports = {
@@ -723,5 +812,6 @@ module.exports = {
   addTaskNote,
   deleteTask,
   getWarehouseAssignees,
+  resolveDestinationWarehouse,
   syncOverdueTasks,
 };

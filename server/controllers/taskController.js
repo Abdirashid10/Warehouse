@@ -91,17 +91,26 @@ async function getTaskMeta(req, res) {
   }
 }
 
+/**
+ * GET /tasks/meta/assignees?warehouse_id=…&to_warehouse_id=…
+ *
+ * Staff eligible for a task at the given warehouse(s). A transfer may pass its destination
+ * too, so staff mapped to either end of the route are offered.
+ */
 async function getTaskAssignees(req, res) {
   try {
-    const { warehouse_id: warehouseId } = req.query;
+    const { warehouse_id: warehouseId, to_warehouse_id: toWarehouseId } = req.query;
     if (!warehouseId || !mongoose.Types.ObjectId.isValid(warehouseId)) {
       return res.status(400).json({ message: 'warehouse_id is required' });
     }
 
-    const { staff, fallback } = await getWarehouseAssignees(warehouseId);
+    const { staff, fallback, warehouses } = await getWarehouseAssignees([warehouseId, toWarehouseId]);
+    const warehouseNames = new Map(warehouses.map((w) => [w._id.toString(), w.name]));
+
     return res.json({
       warehouse_id: warehouseId,
-      // true → no staff mapped to this warehouse, so every active staff member is listed
+      to_warehouse_id: toWarehouseId && mongoose.Types.ObjectId.isValid(toWarehouseId) ? toWarehouseId : null,
+      // true → none of these warehouses has mapped staff, so every active staff member is listed
       fallback,
       staff: staff.map((u) => ({
         id: u._id.toString(),
@@ -110,6 +119,8 @@ async function getTaskAssignees(req, res) {
         email: u.email,
         role: u.role,
         avatar: u.avatar || '',
+        warehouse_ids: u.matchedWarehouseIds || [],
+        warehouse_names: (u.matchedWarehouseIds || []).map((id) => warehouseNames.get(id)).filter(Boolean),
       })),
     });
   } catch (err) {
@@ -183,6 +194,8 @@ async function updateTaskStatusHandler(req, res) {
 
     const task = await updateTaskStatus(req.params.id, { status, note, executed_quantity }, req.user);
 
+    // Every transition (Accepted → In Progress → Completed) lands in the audit log with the
+    // acting user, both statuses, and the row's own timestamp.
     await logAudit(req, {
       actorId: req.user.id,
       actorRole: req.user.role,
@@ -192,9 +205,17 @@ async function updateTaskStatusHandler(req, res) {
       entityId: task._id.toString(),
       entityLabel: task.title,
       beforeValue: { status: previousStatus },
-      afterValue: { status: task.status },
-      details: `${task.title} → ${status}${note ? ` (${note})` : ''}`,
-      warehouseIds: [task.warehouseId?._id || task.warehouseId].filter(Boolean),
+      afterValue: {
+        status: task.status,
+        changed_at: new Date().toISOString(),
+        ...(task.executedQuantity != null ? { executed_quantity: task.executedQuantity } : {}),
+        ...(task.movementId ? { movement_id: task.movementId.toString() } : {}),
+      },
+      details: `${task.title}: ${previousStatus} → ${status}${note ? ` (${note})` : ''}`,
+      warehouseIds: [
+        task.warehouseId?._id || task.warehouseId,
+        task.toWarehouseId?._id || task.toWarehouseId,
+      ].filter(Boolean),
     });
 
     return res.json({ task: formatTask(task) });

@@ -65,3 +65,43 @@ export const ACTION_LABELS = {
   Rejected:               { label: 'Reject', icon: 'x', variant: 'red' },
   Pending:                { label: 'Reopen', icon: 'rotate', variant: 'slate' },
 };
+
+/** The completion button names the operation it will execute. */
+const COMPLETE_LABELS = {
+  TRANSFER: 'Complete Transfer',
+  INBOUND: 'Complete Receive',
+  OUTBOUND: 'Complete Dispatch',
+  RETURN: 'Complete Return',
+  ADJUSTMENT: 'Complete Adjustment',
+};
+
+/**
+ * The one action that moves the task forward from its current status. Rendered as the
+ * primary (solid) button; everything else in the list is a secondary escape hatch.
+ */
+const PRIMARY_NEXT_STATUS = {
+  Pending: 'Accepted',
+  Accepted: 'In Progress',
+  'In Progress': 'Completed',
+  'Waiting Confirmation': 'Completed',
+  Overdue: 'In Progress',
+};
+
+export function primaryActionFor(currentStatus) {
+  return PRIMARY_NEXT_STATUS[currentStatus] || null;
+}
+
+/**
+ * Label/icon/variant for a transition, specialised by task type where it helps:
+ * Accepted → "Start Work", then In Progress → "Complete Transfer" on a transfer task.
+ */
+export function taskActionConfig(nextStatus, task) {
+  const base = ACTION_LABELS[nextStatus];
+  if (!base) return null;
+
+  if (nextStatus === 'Completed') {
+    const movementType = task?.task_type_meta?.movement_type;
+    return { ...base, label: COMPLETE_LABELS[movementType] || base.label };
+  }
+  return base;
+}

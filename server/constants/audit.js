@@ -21,8 +21,10 @@ const TASK_STATUS_ACTIONS = {
   Pending: 'Created',
   Accepted: 'Accepted',
   'In Progress': 'Started',
+  'Waiting Confirmation': 'Submitted for Confirmation',
   Completed: 'Completed',
   Rejected: 'Rejected',
+  Overdue: 'Overdue',
 };
 
 /** Stored DB values (any casing) → canonical UI/API module key. */
