@@ -1,0 +1,17 @@
+# Release signing template.
+#
+# Copy to `android/key.properties` and fill in real values. That file is
+# gitignored and must never be committed — it unlocks your signing key.
+#
+# Generate a keystore once (valid ~27 years), then keep it backed up somewhere
+# safe. Losing it means you can never publish an update to the same listing:
+#
+#   keytool -genkey -v -keystore %USERPROFILE%\logistics-wms-release.jks \
+#     -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias logistics
+#
+# storeFile accepts an absolute path, or a path relative to android/app.
+
+storePassword=<password you set at keystore creation>
+keyPassword=<password for the key alias>
+keyAlias=logistics
+storeFile=C:/Users/<you>/logistics-wms-release.jks
