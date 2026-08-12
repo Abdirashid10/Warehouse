@@ -142,7 +142,13 @@ export function ReportsPage() {
     setPdfError('');
     setPdfLoading(true);
     try {
-      generateInventoryAuditPdf(data, { user });
+      // Always print live database numbers, never a stale cache snapshot.
+      const fresh = await refetch();
+      const payload = fresh.data ?? data;
+      if (fresh.isError && !payload) {
+        throw new Error('Could not load live report data — PDF not generated.');
+      }
+      generateInventoryAuditPdf(payload, { user });
     } catch (err) {
       setPdfError(err.message || 'PDF generation failed');
     } finally {

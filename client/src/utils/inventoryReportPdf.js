@@ -127,7 +127,11 @@ function drawMetaStrip(doc, margin, y, pageWidth, meta) {
   doc.setTextColor(...C.slate);
   const mid = pageWidth / 2;
   doc.text(`Audit scope: All warehouses • ${meta.lineCount} inventory lines`, margin + 4, y + 5);
-  doc.text(`Products in catalog: ${meta.productCount}`, margin + 4, y + 10);
+  doc.text(
+    `In stock: ${meta.inStockLines} • Low: ${meta.lowStockLines} • Out: ${meta.outOfStockLines} • Catalog: ${meta.productCount} SKUs`,
+    margin + 4,
+    y + 10
+  );
   doc.text(`Currency: USD`, mid, y + 5, { align: 'center' });
   doc.text(`Export: PDF / A4`, mid, y + 10, { align: 'center' });
   doc.text(`Status: Official system record`, pageWidth - margin - 4, y + 7.5, { align: 'right' });
@@ -189,8 +193,11 @@ function drawKpiGrid(doc, margin, y, pageWidth, fs, alerts) {
   const cols = 2;
   const cardW = (pageWidth - margin * 2 - gap) / cols;
   const cardH = 24;
-  const low = alerts.filter((a) => a.stock_status === 'Low Stock').length;
-  const out = alerts.filter((a) => a.stock_status === 'Out of Stock').length;
+  /* Server-computed counts are authoritative (identical to the dashboard KPIs);
+     the alert rows are only a fallback for older payloads. */
+  const low = fs.low_stock_lines ?? alerts.filter((a) => a.stock_status === 'Low Stock').length;
+  const out =
+    fs.out_of_stock_lines ?? alerts.filter((a) => a.stock_status === 'Out of Stock').length;
 
   const cards = [
     {
@@ -208,13 +215,13 @@ function drawKpiGrid(doc, margin, y, pageWidth, fs, alerts) {
     {
       label: 'Total units on hand',
       value: formatNumber(fs.total_units),
-      sub: `${formatNumber(fs.inventory_lines)} active lines`,
+      sub: `${formatNumber(fs.inventory_lines)} inventory lines`,
       accent: C.emerald,
     },
     {
       label: 'Stock risk lines',
       value: formatNumber(low + out),
-      sub: `${low} low • ${out} out of stock`,
+      sub: `${formatNumber(low)} low • ${formatNumber(out)} out of stock`,
       accent: C.amber,
     },
   ];
@@ -424,13 +431,19 @@ export function generateInventoryAuditPdf(report, { user, useUtc = false } = {})
   const condition = report.condition_breakdown || {};
   const warehouses = report.warehouse_comparison || [];
 
+  const detail = report.inventory_detail || [];
+  const countByStatus = (status) => detail.filter((r) => r.stock_status === status).length;
+
   const meta = {
     reportId,
     generatedAt: formatDateTime(generatedAt, useUtc),
     preparedBy,
     role,
-    lineCount: fs.inventory_lines ?? 0,
+    lineCount: fs.inventory_lines ?? detail.length,
     productCount: fs.product_count ?? 0,
+    inStockLines: fs.in_stock_lines ?? countByStatus('In Stock'),
+    lowStockLines: fs.low_stock_lines ?? countByStatus('Low Stock'),
+    outOfStockLines: fs.out_of_stock_lines ?? countByStatus('Out of Stock'),
   };
 
   let y = drawPremiumHeader(doc, pageWidth, margin, meta);
@@ -513,7 +526,6 @@ export function generateInventoryAuditPdf(report, { user, useUtc = false } = {})
     'Product × warehouse lines with condition split and valuation'
   );
 
-  const detail = report.inventory_detail || [];
   const detailBody = detail.map((row) => [
     row.sku,
     row.product_name,

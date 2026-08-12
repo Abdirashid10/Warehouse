@@ -75,15 +75,32 @@ const ROLE_BADGE = {
 };
 
 const MODULE_OPTIONS = [
-  { value: '', label: 'All Modules' },
   { value: 'inventory', label: 'Inventory' },
+  { value: 'movement', label: 'Movement' },
   { value: 'warehouse', label: 'Warehouse' },
   { value: 'order', label: 'Orders' },
   { value: 'task', label: 'Tasks' },
   { value: 'user', label: 'Users' },
   { value: 'profile', label: 'Profile' },
-  { value: 'movement', label: 'Movement' },
 ];
+
+/** KPI tiles, in display order. Rendered only when the role may read them. */
+const MODULE_KPIS = [
+  { key: 'inventory', label: 'Inventory', icon: Package, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+  { key: 'warehouse', label: 'Warehouse', icon: Warehouse, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-500/10' },
+  { key: 'task', label: 'Tasks', icon: ClipboardList, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+  { key: 'order', label: 'Orders', icon: ShoppingCart, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
+  { key: 'user', label: 'Users', icon: Users, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10' },
+];
+
+/* Literal class names so Tailwind's scanner keeps them. */
+const KPI_GRID_COLS = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+  5: 'sm:grid-cols-5',
+  6: 'sm:grid-cols-6',
+};
 
 /** Mirrors server MODULE_ALIASES → canonical keys for KPI fallbacks. */
 const MODULE_KEY_LOOKUP = {
@@ -140,6 +157,14 @@ export function AuditLogsPage() {
   const pagination = data?.pagination || { page: 1, pages: 1, total: 0 };
   const moduleCounts = data?.moduleCounts || {};
 
+  /* The API decides what this role may read; `null` means unrestricted (Admin).
+     Anything not listed — User Management above all — is never offered here. */
+  const visibleModules = data?.visibleModules ?? null;
+  const canSeeModule = (key) => visibleModules === null || visibleModules.includes(key);
+
+  const kpiCards = MODULE_KPIS.filter((m) => canSeeModule(m.key));
+  const moduleOptions = MODULE_OPTIONS.filter((o) => canSeeModule(o.value));
+
   const pageCategoryCounts = useMemo(() => {
     const c = { inventory: 0, warehouse: 0, order: 0, task: 0, user: 0, profile: 0 };
     activities.forEach((a) => {
@@ -176,13 +201,20 @@ export function AuditLogsPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div className={`grid grid-cols-3 gap-2 ${KPI_GRID_COLS[kpiCards.length + 1] || 'sm:grid-cols-6'}`}>
         <KpiMini label="Total" value={fmt(pagination.total)} icon={Activity} color="text-sky-600 dark:text-sky-400" bg="bg-sky-50 dark:bg-sky-500/10" />
-        <KpiMini label="Inventory" value={moduleCounts.inventory || pageCategoryCounts.inventory || 0} icon={Package} color="text-emerald-600 dark:text-emerald-400" bg="bg-emerald-50 dark:bg-emerald-500/10" active={moduleFilter === 'inventory'} onClick={() => handleModuleFilter('inventory')} />
-        <KpiMini label="Warehouse" value={moduleCounts.warehouse || pageCategoryCounts.warehouse || 0} icon={Warehouse} color="text-sky-600 dark:text-sky-400" bg="bg-sky-50 dark:bg-sky-500/10" active={moduleFilter === 'warehouse'} onClick={() => handleModuleFilter('warehouse')} />
-        <KpiMini label="Tasks" value={moduleCounts.task || pageCategoryCounts.task || 0} icon={ClipboardList} color="text-violet-600 dark:text-violet-400" bg="bg-violet-50 dark:bg-violet-500/10" active={moduleFilter === 'task'} onClick={() => handleModuleFilter('task')} />
-        <KpiMini label="Orders" value={moduleCounts.order || pageCategoryCounts.order || 0} icon={ShoppingCart} color="text-blue-600 dark:text-blue-400" bg="bg-blue-50 dark:bg-blue-500/10" active={moduleFilter === 'order'} onClick={() => handleModuleFilter('order')} />
-        <KpiMini label="Users" value={moduleCounts.user || pageCategoryCounts.user || 0} icon={Users} color="text-orange-600 dark:text-orange-400" bg="bg-orange-50 dark:bg-orange-500/10" active={moduleFilter === 'user'} onClick={() => handleModuleFilter('user')} />
+        {kpiCards.map((m) => (
+          <KpiMini
+            key={m.key}
+            label={m.label}
+            value={moduleCounts[m.key] || pageCategoryCounts[m.key] || 0}
+            icon={m.icon}
+            color={m.color}
+            bg={m.bg}
+            active={moduleFilter === m.key}
+            onClick={() => handleModuleFilter(m.key)}
+          />
+        ))}
       </div>
 
       {/* ── Search + Filters ── */}
@@ -207,7 +239,8 @@ export function AuditLogsPage() {
           <div className="flex items-center gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mr-1">Module:</span>
             <select value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setPage(1); }} className="rounded-md border border-border bg-card px-2 py-1 text-[10px] font-medium text-foreground">
-              {MODULE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              <option value="">All Modules</option>
+              {moduleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-1">

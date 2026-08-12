@@ -1,10 +1,13 @@
-const { Inventory, Movement, Product, Order } = require('../models');
+const { Inventory, Movement, Order, Warehouse } = require('../models');
 const { ORDER_STATUSES } = require('../constants/orderStatus');
 const { CREATED_BY_SELECT, formatCreatedBy } = require('../utils/createdByDto');
 const { formatMovementResponse } = require('../utils/movementDto');
 const { fetchInventoryTrackingRows } = require('../services/inventoryTrackingService');
-
-const PRODUCT_COLL = Product.collection.name;
+const {
+  summarizeInventoryFinancials,
+  summarizeWarehouseTotals,
+} = require('../utils/inventoryValuation');
+const { utilizationPercent } = require('../services/warehouseInventoryStats');
 
 /** YYYY-MM-DD in UTC — matches Mongo $dateToString default. */
 function formatYmdUtc(d) {
@@ -84,7 +87,6 @@ async function getDashboardStats(_req, res) {
     const trendStart = utcStartNDaysAgo(6);
 
     const [
-      valueAgg,
       inventoryTracking,
       recentMovements,
       activeWarehouseIds,
@@ -94,31 +96,6 @@ async function getDashboardStats(_req, res) {
       recentOrders,
       ordersCreatedTrendAgg,
     ] = await Promise.all([
-      Inventory.aggregate([
-        {
-          $lookup: {
-            from: PRODUCT_COLL,
-            localField: 'productId',
-            foreignField: '_id',
-            as: 'product',
-          },
-        },
-        { $unwind: '$product' },
-        {
-          $group: {
-            _id: null,
-            totalStockValue: {
-              $sum: {
-                $multiply: [
-                  { $max: ['$quantity', 0] },
-                  { $ifNull: ['$product.unitCost', 0] },
-                ],
-              },
-            },
-          },
-        },
-      ]),
-
       fetchInventoryTrackingRows(),
 
       Movement.find()
@@ -192,8 +169,9 @@ async function getDashboardStats(_req, res) {
       ]),
     ]);
 
-    const totalStockValue =
-      valueAgg.length > 0 ? Math.round(valueAgg[0].totalStockValue * 100) / 100 : 0;
+    /* Same rows, same helper as /reports/inventory-audit → identical figures. */
+    const financials = summarizeInventoryFinancials(inventoryTracking.rows);
+    const totalStockValue = financials.cost_value;
 
     const inventorySummary = inventoryTracking.summary;
     const lowStockLineCount = inventorySummary.low_stock ?? 0;
@@ -289,7 +267,7 @@ async function getDashboardWidgets(req, res) {
     const [
       inventoryTracking,
       allTaskRows,
-      warehousePerf,
+      warehouseDocs,
       pendingOrderCount,
       recentTasks,
     ] = await Promise.all([
@@ -297,27 +275,7 @@ async function getDashboardWidgets(req, res) {
 
       listTasksForUser(req.user, {}),
 
-      Inventory.aggregate([
-        { $match: { quantity: { $gt: 0 } } },
-        {
-          $group: {
-            _id: '$warehouseId',
-            totalUnits: { $sum: '$quantity' },
-            lineCount: { $sum: 1 },
-          },
-        },
-        {
-          $lookup: {
-            from: 'warehouses',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'wh',
-          },
-        },
-        { $unwind: '$wh' },
-        { $sort: { totalUnits: -1 } },
-        { $limit: 5 },
-      ]),
+      Warehouse.find().select('name location capacity').lean(),
 
       Order.countDocuments({ status: 'Pending' }),
 
@@ -423,16 +381,29 @@ async function getDashboardWidgets(req, res) {
       expiringSoonItems,
     };
 
-    /* ── Warehouse performance ── */
-    const warehouseStats = warehousePerf.map((w) => ({
-      id: w._id,
-      name: w.wh.name,
-      location: w.wh.location,
-      capacity: w.wh.capacity || 0,
-      totalUnits: w.totalUnits,
-      lineCount: w.lineCount,
-      utilization: w.wh.capacity > 0 ? Math.min(100, Math.round((w.totalUnits / w.wh.capacity) * 100)) : 0,
-    }));
+    /* ── Warehouse performance ──
+       Rolled up from the same tracking rows as the KPIs and the audit report,
+       so per-warehouse units always sum to totalUnitsOnHand. */
+    const capacityById = new Map(
+      warehouseDocs.map((w) => [w._id.toString(), w])
+    );
+
+    const warehouseStats = summarizeWarehouseTotals(rows)
+      .sort((a, b) => b.total_units - a.total_units)
+      .slice(0, 5)
+      .map((w) => {
+        const doc = capacityById.get(w.warehouse_id) || {};
+        const capacity = doc.capacity || 0;
+        return {
+          id: w.warehouse_id,
+          name: doc.name || w.warehouse_name,
+          location: doc.location || w.warehouse_location,
+          capacity,
+          totalUnits: w.total_units,
+          lineCount: w.line_count,
+          utilization: utilizationPercent(w.total_units, capacity),
+        };
+      });
 
     /* ── Smart insights ── */
     const insights = [];

@@ -1,32 +1,24 @@
-const Inventory = require('../models/Inventory');
+const { fetchInventoryTrackingRows } = require('./inventoryTrackingService');
+const { summarizeWarehouseTotals } = require('../utils/inventoryValuation');
 
 /**
- * Sum on-hand units and stock lines per warehouse from live inventory records.
- * Matches dashboard warehouse performance aggregation.
+ * On-hand units and stock lines per warehouse, derived from the same live
+ * tracking rows as the dashboard KPIs and the audit report — so a warehouse
+ * card, the dashboard, and the PDF can never show different totals.
+ *
+ * A "line" is one product × warehouse pair (Inventory stores one document per
+ * condition, so counting documents would over-report lines).
  */
 async function fetchWarehouseInventoryTotals(warehouseIds = null) {
-  const match = { quantity: { $gt: 0 } };
-  if (Array.isArray(warehouseIds) && warehouseIds.length > 0) {
-    match.warehouseId = { $in: warehouseIds };
-  }
-
-  const rows = await Inventory.aggregate([
-    { $match: match },
-    {
-      $group: {
-        _id: '$warehouseId',
-        totalUnits: { $sum: '$quantity' },
-        lineCount: { $sum: 1 },
-      },
-    },
-  ]);
+  const ids = Array.isArray(warehouseIds) ? warehouseIds.map(String).filter(Boolean) : [];
+  const { rows } = await fetchInventoryTrackingRows(ids.length ? { warehouseIds: ids } : {});
 
   const map = new Map();
-  for (const row of rows) {
-    if (!row._id) continue;
-    map.set(row._id.toString(), {
-      totalUnits: row.totalUnits ?? 0,
-      lineCount: row.lineCount ?? 0,
+  for (const entry of summarizeWarehouseTotals(rows)) {
+    if (!entry.warehouse_id) continue;
+    map.set(entry.warehouse_id, {
+      totalUnits: entry.total_units,
+      lineCount: entry.line_count,
     });
   }
   return map;

@@ -1,24 +1,20 @@
-const { Inventory, Product, Movement } = require('../models');
-const {
-  COLLECTIONS,
-  leftJoin,
-  formatUserDoc,
-  formatProductLean,
-} = require('../utils/lookupHelpers');
-const { applyStockStatusToRow } = require('../utils/stockStatus');
+const { Product, Movement } = require('../models');
+const { COLLECTIONS, leftJoin } = require('../utils/lookupHelpers');
 const { formatPerformedByUser } = require('../utils/createdByDto');
+const { fetchInventoryTrackingRows } = require('../services/inventoryTrackingService');
 const {
-  CONDITION_AVAILABLE,
-  CONDITION_DAMAGED,
-  CONDITION_INSPECTION,
-} = require('../constants/inventoryConditions');
+  roundMoney,
+  lineUnits,
+  lineCostValue,
+  lineRetailValue,
+  conditionSplit,
+  summarizeInventoryFinancials,
+  summarizeConditionBreakdown,
+  summarizeWarehouseTotals,
+} = require('../utils/inventoryValuation');
 
 const FAST_MOVING_DAYS = 90;
 const AUDIT_TRAIL_LIMIT = 20;
-
-function roundMoney(n) {
-  return Math.round((Number(n) || 0) * 100) / 100;
-}
 
 /**
  * GET /api/reports/valuation — legacy summary (Admin & Supervisor).
@@ -59,28 +55,30 @@ async function getInventoryAudit(req, res) {
 async function buildInventoryAuditPayload(user) {
   const generatedAt = new Date();
 
-  const [financialRows, warehouseRows, conditionRows, detailRows, fastMoving, auditRows] =
-    await Promise.all([
-      aggregateFinancialSummary(),
-      aggregateWarehouseComparison(),
-      aggregateConditionBreakdown(),
-      aggregateInventoryDetail(),
-      aggregateFastMoving(),
-      aggregateAuditTrail(),
-    ]);
+  /*
+   * The audit dataset is derived from the exact same live tracking rows the
+   * dashboard reads (services/inventoryTrackingService), so every figure the
+   * PDF prints is the figure the web dashboard and mobile app display.
+   */
+  const [tracking, productCount, fastMoving, auditRows] = await Promise.all([
+    fetchInventoryTrackingRows(),
+    Product.countDocuments(),
+    aggregateFastMoving(),
+    aggregateAuditTrail(),
+  ]);
 
-  const financial = financialRows[0] || {
-    totalUnits: 0,
-    costValue: 0,
-    retailValue: 0,
-    lineCount: 0,
-  };
+  const detailRows = (tracking.rows || []).map(toAuditDetailRow).sort(bySkuThenWarehouse);
 
-  const costValue = roundMoney(financial.costValue);
-  const retailValue = roundMoney(financial.retailValue);
-  const estimatedProfit = roundMoney(retailValue - costValue);
-
-  const productCount = await Product.countDocuments();
+  const financials = summarizeInventoryFinancials(detailRows);
+  const conditionBreakdown = summarizeConditionBreakdown(detailRows);
+  const warehouseComparison = summarizeWarehouseTotals(detailRows).map((w) => ({
+    warehouse_id: w.warehouse_id,
+    warehouse_name: w.warehouse_name,
+    total_units: w.total_units,
+    line_count: w.line_count,
+    cost_value: w.cost_value,
+    retail_value: w.retail_value,
+  }));
 
   const lowStockAlerts = detailRows
     .filter((r) => r.stock_status === 'Low Stock' || r.stock_status === 'Out of Stock')
@@ -96,27 +94,6 @@ async function buildInventoryAuditPayload(user) {
       line_cost_value: r.line_cost_value,
     }));
 
-  const conditionTotal =
-    conditionRows.available_qty +
-    conditionRows.damaged_qty +
-    conditionRows.inspection_qty;
-
-  const conditionBreakdown = {
-    available_qty: conditionRows.available_qty,
-    damaged_qty: conditionRows.damaged_qty,
-    inspection_qty: conditionRows.inspection_qty,
-    total_qty: conditionTotal,
-    available_pct: conditionTotal
-      ? roundMoney((conditionRows.available_qty / conditionTotal) * 100)
-      : 0,
-    damaged_pct: conditionTotal
-      ? roundMoney((conditionRows.damaged_qty / conditionTotal) * 100)
-      : 0,
-    inspection_pct: conditionTotal
-      ? roundMoney((conditionRows.inspection_qty / conditionTotal) * 100)
-      : 0,
-  };
-
   return {
     generated_at: generatedAt.toISOString(),
     generated_by: user
@@ -129,14 +106,19 @@ async function buildInventoryAuditPayload(user) {
       : null,
     system_name: 'LOGISTICS WMS',
     financial_summary: {
-      cost_value: costValue,
-      retail_value: retailValue,
-      total_units: financial.totalUnits,
-      estimated_profit: estimatedProfit,
-      inventory_lines: financial.lineCount,
+      cost_value: financials.cost_value,
+      retail_value: financials.retail_value,
+      total_units: financials.total_units,
+      estimated_profit: financials.estimated_profit,
+      inventory_lines: financials.inventory_lines,
+      in_stock_lines: financials.in_stock_lines,
+      low_stock_lines: financials.low_stock_lines,
+      out_of_stock_lines: financials.out_of_stock_lines,
       product_count: productCount,
     },
-    warehouse_comparison: warehouseRows,
+    /* Identical shape/values to the dashboard's `inventorySummary`. */
+    inventory_summary: tracking.summary,
+    warehouse_comparison: warehouseComparison,
     condition_breakdown: conditionBreakdown,
     inventory_detail: detailRows,
     low_stock_alerts: lowStockAlerts,
@@ -145,152 +127,41 @@ async function buildInventoryAuditPayload(user) {
   };
 }
 
-async function aggregateFinancialSummary() {
-  return Inventory.aggregate([
-    {
-      $lookup: {
-        from: COLLECTIONS.products,
-        localField: 'productId',
-        foreignField: '_id',
-        as: 'product',
-      },
-    },
-    { $unwind: { path: '$product', preserveNullAndEmptyArrays: false } },
-    {
-      $group: {
-        _id: null,
-        totalUnits: { $sum: '$quantity' },
-        costValue: { $sum: { $multiply: ['$quantity', '$product.unitCost'] } },
-        retailValue: { $sum: { $multiply: ['$quantity', '$product.unitPrice'] } },
-        lineCount: { $sum: 1 },
-      },
-    },
-  ]);
+/** Tracking row → audit detail register row (one product × warehouse line). */
+function toAuditDetailRow(row) {
+  const split = conditionSplit(row);
+
+  const detail = {
+    id: row.id,
+    product_id: row.product_id,
+    warehouse_id: row.warehouse_id,
+    sku: row.sku || '—',
+    product_name: row.product_name || '—',
+    category: row.product?.category?.name || '—',
+    warehouse_name: row.warehouse_name || '—',
+    warehouse_location: row.warehouse?.location || '',
+    current_quantity: lineUnits(row),
+    good_qty: split.good,
+    damaged_qty: split.damaged,
+    inspection_qty: split.inspection,
+    condition_summary: `Good: ${split.good} · Damaged: ${split.damaged} · Insp: ${split.inspection}`,
+    /* Rounded first, then multiplied — printed unit cost × qty == printed line value. */
+    unit_cost: roundMoney(row.product?.unit_cost),
+    unit_price: roundMoney(row.product?.unit_price),
+    min_stock_threshold: row.min_stock_threshold ?? 0,
+    stock_status: row.stock_status,
+  };
+
+  detail.line_cost_value = lineCostValue(detail);
+  detail.line_retail_value = lineRetailValue(detail);
+  return detail;
 }
 
-async function aggregateWarehouseComparison() {
-  const rows = await Inventory.aggregate([
-    {
-      $lookup: {
-        from: COLLECTIONS.products,
-        localField: 'productId',
-        foreignField: '_id',
-        as: 'product',
-      },
-    },
-    { $unwind: { path: '$product', preserveNullAndEmptyArrays: false } },
-    ...leftJoin('warehouseId', COLLECTIONS.warehouses, 'warehouse'),
-    {
-      $group: {
-        _id: '$warehouseId',
-        warehouse_name: { $first: '$warehouse.name' },
-        total_units: { $sum: '$quantity' },
-        cost_value: { $sum: { $multiply: ['$quantity', '$product.unitCost'] } },
-        retail_value: { $sum: { $multiply: ['$quantity', '$product.unitPrice'] } },
-      },
-    },
-    { $sort: { warehouse_name: 1 } },
-  ]);
-
-  return rows.map((r) => ({
-    warehouse_id: r._id?.toString(),
-    warehouse_name: r.warehouse_name || 'Unknown',
-    total_units: r.total_units ?? 0,
-    cost_value: roundMoney(r.cost_value),
-    retail_value: roundMoney(r.retail_value),
-  }));
-}
-
-async function aggregateConditionBreakdown() {
-  const rows = await Inventory.aggregate([
-    {
-      $group: {
-        _id: '$condition',
-        qty: { $sum: '$quantity' },
-      },
-    },
-  ]);
-
-  let available_qty = 0;
-  let damaged_qty = 0;
-  let inspection_qty = 0;
-
-  for (const row of rows) {
-    const c = String(row._id || '');
-    if (c === CONDITION_AVAILABLE) available_qty = row.qty ?? 0;
-    else if (c === CONDITION_DAMAGED) damaged_qty = row.qty ?? 0;
-    else if (c === CONDITION_INSPECTION) inspection_qty = row.qty ?? 0;
-    else available_qty += row.qty ?? 0;
-  }
-
-  return { available_qty, damaged_qty, inspection_qty };
-}
-
-async function aggregateInventoryDetail() {
-  const raw = await Inventory.aggregate([
-    {
-      $group: {
-        _id: { productId: '$productId', warehouseId: '$warehouseId' },
-        current_quantity: { $sum: '$quantity' },
-        good_qty: {
-          $sum: {
-            $cond: [{ $eq: ['$condition', CONDITION_AVAILABLE] }, '$quantity', 0],
-          },
-        },
-        damaged_qty: {
-          $sum: {
-            $cond: [{ $eq: ['$condition', CONDITION_DAMAGED] }, '$quantity', 0],
-          },
-        },
-        inspection_qty: {
-          $sum: {
-            $cond: [{ $eq: ['$condition', CONDITION_INSPECTION] }, '$quantity', 0],
-          },
-        },
-      },
-    },
-    ...leftJoin('_id.productId', COLLECTIONS.products, 'product'),
-    ...leftJoin('_id.warehouseId', COLLECTIONS.warehouses, 'warehouse'),
-    {
-      $lookup: {
-        from: COLLECTIONS.categories,
-        localField: 'product.categoryId',
-        foreignField: '_id',
-        as: 'category',
-      },
-    },
-    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-    { $sort: { 'product.sku': 1, 'warehouse.name': 1 } },
-  ]);
-
-  return raw.map((row) => {
-    const product = row.product
-      ? formatProductLean({ ...row.product, category: row.category })
-      : null;
-    const qty = row.current_quantity ?? 0;
-    const unitCost = product?.unit_cost ?? 0;
-    const unitPrice = product?.unit_price ?? 0;
-    const minThreshold = product?.min_stock_threshold ?? 0;
-
-    return applyStockStatusToRow({
-      id: `${row._id.productId}_${row._id.warehouseId}`,
-      sku: product?.sku || '—',
-      product_name: product?.name || '—',
-      category: product?.category?.name || '—',
-      warehouse_name: row.warehouse?.name || '—',
-      warehouse_location: row.warehouse?.location || '',
-      current_quantity: qty,
-      good_qty: row.good_qty ?? 0,
-      damaged_qty: row.damaged_qty ?? 0,
-      inspection_qty: row.inspection_qty ?? 0,
-      condition_summary: `Good: ${row.good_qty ?? 0} · Damaged: ${row.damaged_qty ?? 0} · Insp: ${row.inspection_qty ?? 0}`,
-      unit_cost: roundMoney(unitCost),
-      unit_price: roundMoney(unitPrice),
-      line_cost_value: roundMoney(qty * unitCost),
-      line_retail_value: roundMoney(qty * unitPrice),
-      min_stock_threshold: minThreshold,
-    });
-  });
+function bySkuThenWarehouse(a, b) {
+  return (
+    String(a.sku).localeCompare(String(b.sku)) ||
+    String(a.warehouse_name).localeCompare(String(b.warehouse_name))
+  );
 }
 
 async function aggregateFastMoving() {

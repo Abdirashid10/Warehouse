@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 const { UserActivityLog } = require('../models');
-const { resolveModuleFilter, normalizeModuleKey } = require('../constants/audit');
+const {
+  resolveModuleFilter,
+  normalizeModuleKey,
+  visibleModuleKeysForRole,
+  moduleValuesForKeys,
+} = require('../constants/audit');
+
+/** Filter that can never match — used when a role requests a forbidden module. */
+const MATCH_NOTHING = { _id: { $in: [] } };
 
 function parsePage(value) {
   const n = parseInt(String(value ?? ''), 10);
@@ -65,9 +73,27 @@ function formatActivityLog(log) {
 
 function buildActivityFilter(req) {
   const filter = {};
+  const and = [];
+
+  /*
+   * Module visibility is enforced here, on the query, so it applies to every
+   * consumer at once: the log list, the pagination total, the module KPI
+   * counts, and the /recent feed. A Supervisor must never receive User
+   * Management entries — those actions are Admin-only and carry the target
+   * user's identity.
+   */
+  const allowedModuleKeys = visibleModuleKeysForRole(req.user.role);
+  const requestedModuleKey = req.query.module ? normalizeModuleKey(req.query.module) : null;
+
+  if (allowedModuleKeys !== null) {
+    if (requestedModuleKey && !allowedModuleKeys.includes(requestedModuleKey)) {
+      return MATCH_NOTHING;
+    }
+    and.push({ module: { $in: moduleValuesForKeys(allowedModuleKeys) } });
+  }
 
   const moduleValues = resolveModuleFilter(req.query.module);
-  if (moduleValues) filter.module = { $in: moduleValues };
+  if (moduleValues) and.push({ module: { $in: moduleValues } });
 
   if (req.query.action) {
     filter.action = { $regex: req.query.action, $options: 'i' };
@@ -98,11 +124,10 @@ function buildActivityFilter(req) {
       .filter((id) => mongoose.Types.ObjectId.isValid(id))
       .map((id) => new mongoose.Types.ObjectId(id));
 
-    filter.$and = filter.$and || [];
     if (assigned.length === 0) {
-      filter.$and.push({ actorId: supervisorId });
+      and.push({ actorId: supervisorId });
     } else {
-      filter.$and.push({
+      and.push({
         $or: [
           { actorId: supervisorId },
           { warehouseIds: { $in: assigned } },
@@ -110,6 +135,8 @@ function buildActivityFilter(req) {
       });
     }
   }
+
+  if (and.length) filter.$and = and;
 
   return filter;
 }
@@ -150,6 +177,9 @@ async function listActivities(req, res) {
       activities: logs.map(formatActivityLog),
       pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
       moduleCounts,
+      /* Modules this caller may read — the UI builds its filters from this so
+         it can never offer a module the API will refuse. `null` = unrestricted. */
+      visibleModules: visibleModuleKeysForRole(req.user.role),
     });
   } catch (err) {
     console.error('listActivities error:', err.message);
