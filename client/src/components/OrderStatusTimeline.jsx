@@ -19,8 +19,7 @@ export function OrderStatusTimeline({ history = [] }) {
           <span className="absolute -left-[9px] flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px]">
             {statusTimelineIcon(entry.status)}
           </span>
-          <p className="text-sm font-medium text-slate-100">
-            {entry.status}
+              <p className="text-sm font-medium text-foreground">            {entry.status}
             <span className="font-normal text-slate-500">
               {' '}
               — {formatOrderDateTime(entry.changed_at)}
